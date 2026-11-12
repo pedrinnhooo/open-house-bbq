@@ -12,6 +12,7 @@
 </head>
 <body>
 
+
   <header class="top">
     <a class="brand" href="#">
       <span class="brand-icon">🔥</span>
@@ -23,10 +24,29 @@
       <a href="#admin">Organizador</a>
     </nav>
   
-    <button id="login" class="glass-button">
-      Entrar com Google
-    </button>
+    <div class="header-account">
+      <button id="login" class="glass-button">
+        Entrar com Google
+      </button>
+  
+      <div id="userMenu" class="user-menu hidden">
+        <button id="userMenuButton" class="user-menu-button" type="button">
+          <img id="userAvatar" src="" alt="Foto do perfil">
+          <span id="userName">Minha conta</span>
+          <span class="chevron">⌄</span>
+        </button>
+  
+        <div id="userDropdown" class="user-dropdown hidden">
+          <div class="user-dropdown-info">
+            <strong id="dropdownName"></strong>
+            <small id="dropdownEmail"></small>
+          </div>
+          <button id="logout" type="button">Sair da conta</button>
+        </div>
+      </div>
+    </div>
   </header>
+  
   
 
   <main>

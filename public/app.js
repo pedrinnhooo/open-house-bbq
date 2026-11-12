@@ -48,32 +48,38 @@ let stopClaims = null;
 let currentClaims = [];
 
 // Itens estáticos: não precisam ser cadastrados no Firestore.
+
+
+$("userMenuButton").onclick = () => {
+  $("userDropdown").classList.toggle("hidden");
+};
+
+document.addEventListener("click", event => {
+  if (!event.target.closest(".user-menu")) {
+    $("userDropdown").classList.add("hidden");
+  }
+});
+
+$("logout").onclick = async () => {
+  await signOut(auth);
+  $("userDropdown").classList.add("hidden");
+};
+
+
 const ITEMS = [
-  ["picanha", "Picanha / carne bovina", "Carnes", 5],
-  ["fraldinha", "Fraldinha", "Carnes", 3],
-  ["contra-file", "Contra-filé", "Carnes", 3],
-  ["linguica", "Linguiça", "Carnes", 4],
-  ["coracao", "Coração de frango", "Carnes", 3],
-  ["frango", "Frango", "Carnes", 4],
-  ["costela", "Costela", "Carnes", 2],
-  ["pao-alho", "Pão de alho", "Acompanhamentos", 4],
-  ["queijo", "Queijo coalho", "Acompanhamentos", 3],
-  ["farofa", "Farofa", "Acompanhamentos", 3],
-  ["vinagrete", "Vinagrete", "Acompanhamentos", 3],
-  ["maionese", "Maionese", "Acompanhamentos", 3],
-  ["arroz", "Arroz", "Acompanhamentos", 3],
-  ["salada", "Salada", "Acompanhamentos", 2],
-  ["refrigerante", "Refrigerante", "Bebidas", 5],
-  ["agua", "Água", "Bebidas", 4],
-  ["suco", "Suco", "Bebidas", 3],
-  ["cerveja", "Cerveja", "Bebidas", 5],
-  ["carvao", "Carvão", "Outros", 2],
-  ["gelo", "Gelo", "Outros", 3],
-  ["descartaveis", "Copos e pratos descartáveis", "Outros", 3],
-  ["guardanapos", "Talheres e guardanapos", "Outros", 2]
+  ["carne-bovina", "Carne bovina", "Churrasco", 6],
+  ["linguica", "Linguiça", "Churrasco", 4],
+  ["frango", "Frango", "Churrasco", 6],
+  ["pao-alho", "Pão de alho", "Churrasco", 6],
+  ["queijo", "Queijo coalho", "Churrasco", 6]
 ].map(([id, name, category, capacity]) => ({
-  id, name, category, capacity, active: true
+  id,
+  name,
+  category,
+  capacity,
+  active: true
 }));
+
 
 const isAdmin = email =>
   ADMIN_EMAILS.includes(String(email || "").trim().toLowerCase());
@@ -115,7 +121,25 @@ $("login").onclick = async () => {
 onAuthStateChanged(auth, async user => {
   currentUser = user;
 
-  $("login").textContent = user ? "Sair" : "Entrar com Google";
+ 
+$("login").classList.toggle("hidden", !!user);
+$("userMenu").classList.toggle("hidden", !user);
+
+if (user) {
+  const name = user.displayName || "Minha conta";
+  const email = user.email || "";
+  const avatar = user.photoURL;
+
+  $("userName").textContent = name.split(" ")[0];
+  $("dropdownName").textContent = name;
+  $("dropdownEmail").textContent = email;
+
+  $("userAvatar").src = avatar ||
+    "https://www.gravatar.com/avatar/?d=mp";
+
+  $("userAvatar").alt = `Foto de ${name}`;
+}
+
   $("identity").textContent = user
     ? `Conectado como ${user.email}`
     : "";

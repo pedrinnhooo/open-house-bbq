@@ -4,15 +4,23 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function signedIn() {
-      return request.auth != null
-        && request.auth.token.email != null;
-    }
+    
+  function signedIn() {
+    return request.auth != null;
+  }
 
-    function isAdmin() {
-      return signedIn()
-        && request.auth.token.email == 'pedro.ruffo.dev@gmail.com';
-    }
+  function isAdmin() {
+    return signedIn()
+      && request.auth.token.email == "pedro.ruffo.dev@gmail.com";
+  }
+
+  match /allowlist/{email} {
+    allow read: if isAdmin()
+      || (signedIn() && request.auth.token.email == email);
+
+    allow create, update, delete: if isAdmin();
+  }
+
 
     function isAllowed() {
       return signedIn() && (
@@ -23,20 +31,17 @@ service cloud.firestore {
       );
     }
 
-    function validItem(id) {
-      return id in [
-        'picanha',
-        'fraldinha',
-        'contra-file',
-        'linguica',
-        'coracao',
-        'frango',
-        'costela',
-        'pao-alho',
-        'queijo',
-        'farofa',
-      ];
-    }
+    
+  function validItem(id) {
+    return id in [
+      'carne-bovina',
+      'linguica',
+      'frango',
+      'pao-alho',
+      'queijo'
+    ];
+  }
+
 
     function reservationPath(uid) {
       return /databases/$(database)/documents/reservations/$(uid);

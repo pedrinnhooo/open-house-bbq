@@ -33,8 +33,6 @@ exports.bootstrap = onCall(async req => {
   await assertAdmin(email);
   const defaults = [
     ["picanha", "Picanha / carne bovina", "Carnes", 5],
-    ["fraldinha", "Fraldinha", "Carnes", 3],
-    ["contra-file", "Contra-filé", "Carnes", 3],
     ["linguica", "Linguiça", "Carnes", 4],
     ["coracao", "Coração de frango", "Carnes", 3],
     ["frango", "Frango", "Carnes", 4],
