@@ -1,25 +1,139 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Dados só podem ser lidos por usuários autenticados e autorizados.
-    // Escritas são feitas exclusivamente pelas Cloud Functions.
-    function signedIn() { return request.auth != null; }
-    function isAllowed() {
+
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email != null;
+    }
+
+    function isAdmin() {
       return signedIn()
-        && exists(/databases/$(database)/documents/allowlist/$(request.auth.token.email));
+        && request.auth.token.email == 'pedro.ruffo.dev@gmail.com';
     }
+
+    function isAllowed() {
+      return signedIn() && (
+        isAdmin() ||
+        exists(
+          /databases/$(database)/documents/allowlist/$(request.auth.token.email)
+        )
+      );
+    }
+
+    function validItem(id) {
+      return id in [
+        'picanha',
+        'fraldinha',
+        'contra-file',
+        'linguica',
+        'coracao',
+        'frango',
+        'costela',
+        'pao-alho',
+        'queijo',
+        'farofa',
+        'vinagrete',
+        'maionese',
+        'arroz',
+        'salada',
+        'refrigerante',
+        'agua',
+        'suco',
+        'cerveja',
+        'carvao',
+        'gelo',
+        'descartaveis',
+        'guardanapos'
+      ];
+    }
+
+    function reservationPath(uid) {
+      return /databases/$(database)/documents/reservations/$(uid);
+    }
+
+    function claimPath(uid) {
+      return /databases/$(database)/documents/claims/$(uid);
+    }
+
+    function reservationMatchesClaim(uid, itemId) {
+      return existsAfter(reservationPath(uid))
+        && getAfter(reservationPath(uid)).data.attending == true
+        && getAfter(reservationPath(uid)).data.itemId == itemId;
+    }
+
     match /allowlist/{email} {
-      allow read: if signedIn() && request.auth.token.email == email;
-      allow write: if false;
+      allow read: if signedIn()
+        && (isAdmin() || request.auth.token.email == email);
+
+      allow create, update, delete: if isAdmin();
     }
-    match /items/{itemId} {
-      allow read: if isAllowed();
-      allow write: if false;
-    }
+
     match /reservations/{uid} {
-      allow read: if isAllowed() && (request.auth.uid == uid);
-      allow write: if false;
+      allow read: if isAllowed()
+        && (isAdmin() || request.auth.uid == uid);
+
+      allow create, update: if isAllowed()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 90
+        && request.resource.data.attending is bool
+        && request.resource.data.guests is int
+        && request.resource.data.guests >= 0
+        && request.resource.data.guests <= 10
+        && (
+          (
+            request.resource.data.attending == true
+            && request.resource.data.itemId is string
+            && validItem(request.resource.data.itemId)
+            && existsAfter(claimPath(uid))
+            && getAfter(claimPath(uid)).data.itemId
+              == request.resource.data.itemId
+          )
+          ||
+          (
+            request.resource.data.attending == false
+            && request.resource.data.itemId == null
+            && !existsAfter(claimPath(uid))
+          )
+        );
+
+      allow delete: if isAllowed()
+        && request.auth.uid == uid
+        && !existsAfter(claimPath(uid));
     }
+
+    match /claims/{uid} {
+      allow read: if isAllowed();
+
+      allow create, update: if isAllowed()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.itemId is string
+        && validItem(request.resource.data.itemId)
+        && reservationMatchesClaim(
+          uid,
+          request.resource.data.itemId
+        );
+
+      allow delete: if isAllowed()
+        && request.auth.uid == uid
+        && (
+          !existsAfter(reservationPath(uid))
+          ||
+          getAfter(reservationPath(uid)).data.attending == false
+        );
+    }
+
+    match /items/{itemId} {
+      allow read, write: if false;
+    }
+
     match /adminData/{docId} {
       allow read, write: if false;
     }
