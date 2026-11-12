@@ -1,9 +1,7 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
     // Usuário autenticado pelo Firebase.
     function signedIn() {
       return request.auth != null;

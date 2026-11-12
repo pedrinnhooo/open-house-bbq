@@ -13,17 +13,13 @@ service cloud.firestore {
         && request.auth.token.email == "pedro.ruffo.dev@gmail.com";
     }
 
-    function isAllowed() {
-      return signedIn();
-    }
-
     function validItem(id) {
       return id in [
-        'carne-bovina',
-        'linguica',
-        'frango',
-        'pao-alho',
-        'queijo'
+        "carne-bovina",
+        "linguica",
+        "frango",
+        "pao-alho",
+        "queijo"
       ];
     }
 
@@ -37,37 +33,44 @@ service cloud.firestore {
 
     function reservationMatchesClaim(uid, itemId) {
       return existsAfter(reservationPath(uid))
+        && getAfter(reservationPath(uid)).data.uid == uid
         && getAfter(reservationPath(uid)).data.attending == true
         && getAfter(reservationPath(uid)).data.itemId == itemId;
     }
 
-    // Lista de autorização antiga: não é mais necessária.
     match /allowlist/{email} {
       allow read, write: if false;
     }
 
-    // Inscrições
     match /reservations/{uid} {
-      allow read: if isAllowed()
+      allow get: if signedIn()
         && (isAdmin() || request.auth.uid == uid);
 
-      allow create, update: if isAllowed()
+      allow list: if isAdmin();
+
+      allow create: if signedIn()
         && request.auth.uid == uid
+        && !exists(reservationPath(uid))
+        && request.resource.data.keys().hasOnly([
+          "uid",
+          "email",
+          "name",
+          "attending",
+          "itemId",
+          "createdAt"
+        ])
         && request.resource.data.uid == uid
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 90
         && request.resource.data.attending is bool
-        && request.resource.data.guests is int
-        && request.resource.data.guests >= 0
-        && request.resource.data.guests <= 10
         && (
           (
             request.resource.data.attending == true
-            && request.resource.data.itemId is string
             && validItem(request.resource.data.itemId)
             && existsAfter(claimPath(uid))
+            && getAfter(claimPath(uid)).data.uid == uid
             && getAfter(claimPath(uid)).data.itemId
               == request.resource.data.itemId
           )
@@ -79,32 +82,29 @@ service cloud.firestore {
           )
         );
 
-      allow delete: if isAllowed()
-        && request.auth.uid == uid
-        && !existsAfter(claimPath(uid));
+      allow update, delete: if false;
     }
 
-    // Contribuições
     match /claims/{uid} {
-      allow read: if isAllowed();
+      allow read: if signedIn();
 
-      allow create, update: if isAllowed()
+      allow create: if signedIn()
         && request.auth.uid == uid
+        && !exists(claimPath(uid))
+        && !exists(reservationPath(uid))
+        && request.resource.data.keys().hasOnly([
+          "uid",
+          "itemId",
+          "createdAt"
+        ])
         && request.resource.data.uid == uid
-        && request.resource.data.itemId is string
         && validItem(request.resource.data.itemId)
         && reservationMatchesClaim(
           uid,
           request.resource.data.itemId
         );
 
-      allow delete: if isAllowed()
-        && request.auth.uid == uid
-        && (
-          !existsAfter(reservationPath(uid))
-          ||
-          getAfter(reservationPath(uid)).data.attending == false
-        );
+      allow update, delete: if false;
     }
 
     match /items/{itemId} {
