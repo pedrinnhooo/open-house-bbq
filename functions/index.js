@@ -41,19 +41,6 @@ exports.bootstrap = onCall(async req => {
     ["costela", "Costela", "Carnes", 2],
     ["pao-alho", "Pão de alho", "Acompanhamentos", 4],
     ["queijo", "Queijo coalho", "Acompanhamentos", 3],
-    ["farofa", "Farofa", "Acompanhamentos", 3],
-    ["vinagrete", "Vinagrete", "Acompanhamentos", 3],
-    ["maionese", "Maionese", "Acompanhamentos", 3],
-    ["arroz", "Arroz", "Acompanhamentos", 3],
-    ["salada", "Salada", "Acompanhamentos", 2],
-    ["refrigerante", "Refrigerante", "Bebidas", 5],
-    ["agua", "Água", "Bebidas", 4],
-    ["suco", "Suco", "Bebidas", 3],
-    ["cerveja", "Cerveja", "Bebidas", 5],
-    ["carvao", "Carvão", "Outros", 2],
-    ["gelo", "Gelo", "Outros", 3],
-    ["descartaveis", "Copos e pratos descartáveis", "Outros", 3],
-    ["guardanapos", "Talheres e guardanapos", "Outros", 2]
   ];
   const batch = db.batch();
   for (const [id, name, category, capacity] of defaults) {

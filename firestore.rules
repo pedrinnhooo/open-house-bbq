@@ -35,18 +35,6 @@ service cloud.firestore {
         'pao-alho',
         'queijo',
         'farofa',
-        'vinagrete',
-        'maionese',
-        'arroz',
-        'salada',
-        'refrigerante',
-        'agua',
-        'suco',
-        'cerveja',
-        'carvao',
-        'gelo',
-        'descartaveis',
-        'guardanapos'
       ];
     }
 
