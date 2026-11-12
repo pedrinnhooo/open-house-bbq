@@ -767,3 +767,46 @@ select {
   align-items: center;
   line-height: 1.2;
 }
+
+#copyAddress {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.navigation-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.navigation-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+}
+
+.navigation-button.uber {
+  background: #171717;
+}
+
+.navigation-button.waze {
+  background: #33a9e8;
+}
+
+#copyFeedback {
+  text-align: center;
+  margin-top: 10px;
+}
+
+@media (max-width: 380px) {
+  .navigation-buttons {
+    grid-template-columns: 1fr;
+  }
+}

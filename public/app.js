@@ -479,3 +479,22 @@ $("refresh").onclick = () => {
     alert("Não foi possível atualizar o painel.");
   });
 };
+
+const EVENT_ADDRESS = "R. Francisco Tapajós, 359 - Vila da Saúde";
+const encodedAddress = encodeURIComponent(EVENT_ADDRESS);
+
+$("uberLink").href =
+  `https://m.uber.com/ul/?action=setPickup&dropoff[formatted_address]=${encodedAddress}`;
+
+$("wazeLink").href =
+  `https://waze.com/ul?q=${encodedAddress}&navigate=yes`;
+
+$("copyAddress").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(EVENT_ADDRESS);
+    $("copyFeedback").textContent = "Endereço copiado! 📋";
+  } catch (error) {
+    $("copyFeedback").textContent =
+      "Não foi possível copiar. Selecione o endereço manualmente.";
+  }
+});
