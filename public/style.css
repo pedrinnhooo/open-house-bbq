@@ -944,21 +944,22 @@ select {
   gap: 10px;
   margin-top: 10px;
 }
-/* Botões de navegação: Uber e Waze */
+/* Botões de navegação: Uber e Waze (sempre 50/50) */
 .nav-buttons {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-top: 10px;
 }
 
 .nav-btn {
+  min-width: 0;
   height: 52px;
-  padding: 0 14px;
+  padding: 0 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   border-radius: 16px;
   border: 1px solid transparent;
   text-decoration: none;
@@ -969,7 +970,6 @@ select {
 .nav-btn:hover { filter: brightness(1.1); }
 .nav-btn:active { transform: scale(.98); }
 
-/* Uber: preto com wordmark branco */
 .nav-uber {
   background: #000;
   color: #fff;
@@ -984,15 +984,14 @@ select {
   line-height: 1;
 }
 
-/* Waze: azul oficial com mascote e nome */
 .nav-waze {
   background: #33CCFF;
   color: #1a1a1a;
 }
 
 .waze-icon {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
 }
 
@@ -1004,8 +1003,12 @@ select {
   line-height: 1;
 }
 
-@media (max-width: 420px) {
-  .nav-buttons { grid-template-columns: 1fr; }
+/* Telas bem pequenas: reduz um pouco, mas mantém lado a lado */
+@media (max-width: 360px) {
+  .nav-btn { padding: 0 6px; gap: 4px; }
+  .uber-name { font-size: 21px; }
+  .waze-name { font-size: 19px; }
+  .waze-icon { width: 24px; height: 24px; }
 }
 /* Mobile: stack everything */
 @media (max-width: 420px) {
