@@ -124,23 +124,23 @@ onAuthStateChanged(auth, async user => {
   currentUser = user;
 
  
-$("login").classList.toggle("hidden", !!user);
-$("userMenu").classList.toggle("hidden", !user);
+  $("login").classList.toggle("hidden", !!user);
+  $("userMenu").classList.toggle("hidden", !user);
 
-if (user) {
-  const name = user.displayName || "Minha conta";
-  const email = user.email || "";
-  const avatar = user.photoURL;
+  if (user) {
+    const name = user.displayName || "Minha conta";
+    const email = user.email || "";
+    const avatar = user.photoURL;
 
-  $("userName").textContent = name.split(" ")[0];
-  $("dropdownName").textContent = name;
-  $("dropdownEmail").textContent = email;
+    $("userName").textContent = name.split(" ")[0];
+    $("dropdownName").textContent = name;
+    $("dropdownEmail").textContent = email;
 
-  $("userAvatar").src = avatar ||
-    "https://www.gravatar.com/avatar/?d=mp";
+    $("userAvatar").src = avatar ||
+      "https://www.gravatar.com/avatar/?d=mp";
 
-  $("userAvatar").alt = `Foto de ${name}`;
-}
+    $("userAvatar").alt = `Foto de ${name}`;
+  }
 
   $("identity").textContent = user
     ? `Conectado como ${user.email}`
@@ -163,7 +163,7 @@ if (user) {
 
   try {
     const email = userEmail();
-    const admin = isAdmin(email);
+    const admin = isAdmin(email); 
 
     const allowlistRef = doc(db, "allowlist", email);
     const allowlistSnap = admin ? null : await getDoc(allowlistRef);

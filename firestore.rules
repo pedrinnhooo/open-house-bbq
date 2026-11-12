@@ -22,14 +22,9 @@ service cloud.firestore {
   }
 
 
-    function isAllowed() {
-      return signedIn() && (
-        isAdmin() ||
-        exists(
-          /databases/$(database)/documents/allowlist/$(request.auth.token.email)
-        )
-      );
-    }
+  function isAllowed() {
+    return request.auth != null;
+  }
 
     
   function validItem(id) {
