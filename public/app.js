@@ -16,10 +16,6 @@ import {
   getDoc,
   getDocs,
   onSnapshot,
-  query,
-  where,
-  setDoc,
-  deleteDoc,
   runTransaction,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -47,26 +43,6 @@ let currentUser = null;
 let stopClaims = null;
 let currentClaims = [];
 
-// Itens estáticos: não precisam ser cadastrados no Firestore.
-
-
-$("userMenuButton").onclick = () => {
-  $("userDropdown").classList.toggle("hidden");
-};
-
-document.addEventListener("click", event => {
-  if (!event.target.closest(".user-menu")) {
-    $("userDropdown").classList.add("hidden");
-  }
-});
-
-$("logout").onclick = async () => {
-  await signOut(auth);
-  $("userDropdown").classList.add("hidden");
-};
-
-
-
 const ITEMS = [
   ["carne-bovina", "🥩 Carne bovina", 12],
   ["linguica", "🌭 Linguiça", 7],
@@ -80,8 +56,6 @@ const ITEMS = [
   capacity,
   active: true
 }));
-
-
 
 const isAdmin = email =>
   ADMIN_EMAILS.includes(String(email || "").trim().toLowerCase());
@@ -98,14 +72,33 @@ function showMessage(message) {
 }
 
 function setBusy(button, busy, text) {
+  if (!button) return;
+
   if (!button.dataset.originalText) {
     button.dataset.originalText = button.textContent;
   }
+
   button.disabled = busy;
   button.textContent = busy ? text : button.dataset.originalText;
 }
 
-// Login
+// Menu do usuário
+$("userMenuButton").onclick = () => {
+  $("userDropdown").classList.toggle("hidden");
+};
+
+document.addEventListener("click", event => {
+  if (!event.target.closest(".user-menu")) {
+    $("userDropdown").classList.add("hidden");
+  }
+});
+
+$("logout").onclick = async () => {
+  await signOut(auth);
+  $("userDropdown").classList.add("hidden");
+};
+
+// Login Google
 $("login").onclick = async () => {
   if (auth.currentUser) {
     await signOut(auth);
@@ -115,29 +108,28 @@ $("login").onclick = async () => {
   try {
     await signInWithPopup(auth, new GoogleAuthProvider());
   } catch (error) {
+    console.error(error);
     alert(error.message);
   }
 };
 
-// Autenticação e autorização
+// Autenticação
 onAuthStateChanged(auth, async user => {
   currentUser = user;
 
- 
   $("login").classList.toggle("hidden", !!user);
   $("userMenu").classList.toggle("hidden", !user);
 
   if (user) {
     const name = user.displayName || "Minha conta";
     const email = user.email || "";
-    const avatar = user.photoURL;
 
     $("userName").textContent = name.split(" ")[0];
     $("dropdownName").textContent = name;
     $("dropdownEmail").textContent = email;
 
-    $("userAvatar").src = avatar ||
-      "https://www.gravatar.com/avatar/?d=mp";
+    $("userAvatar").src =
+      user.photoURL || "https://www.gravatar.com/avatar/?d=mp";
 
     $("userAvatar").alt = `Foto de ${name}`;
   }
@@ -157,29 +149,22 @@ onAuthStateChanged(auth, async user => {
   currentClaims = [];
 
   if (!user) {
-    showMessage("Entre com sua conta Google autorizada para participar.");
+    showMessage("Entre com sua conta Google para participar.");
     return;
   }
 
   try {
-    const email = userEmail();
-    const admin = isAdmin(email); 
+    const admin = isAdmin(userEmail());
 
-    const allowlistRef = doc(db, "allowlist", email);
-    const allowlistSnap = admin ? null : await getDoc(allowlistRef);
-
-    if (!admin && !allowlistSnap.exists()) {
-      showMessage(`O e-mail ${email} ainda não foi autorizado pelo organizador.`);
-      return;
-    }
-
-    showMessage("Acesso autorizado. Escolha sua contribuição abaixo.");
+    showMessage("Acesso autorizado! Escolha sua contribuição.");
     $("app").classList.remove("hidden");
+
+    if (admin) {
+      $("admin").classList.remove("hidden");
+    }
 
     await loadReservation();
 
-    // As reservas de contribuição ficam em claims.
-    // Elas não contêm nome ou e-mail, somente UID e item.
     stopClaims = onSnapshot(
       collection(db, "claims"),
       snapshot => {
@@ -196,25 +181,32 @@ onAuthStateChanged(auth, async user => {
       },
       error => {
         console.error(error);
-        showMessage("Não foi possível carregar as opções. Verifique as regras do Firestore.");
+        showMessage(
+          "Não foi possível carregar as opções. Verifique as regras do Firestore."
+        );
       }
     );
 
     if (admin) {
-      $("admin").classList.remove("hidden");
       await loadAdmin();
     }
   } catch (error) {
     console.error(error);
-    showMessage("Não foi possível validar seu acesso. Confira as regras do Firebase.");
+    showMessage(
+      "Não foi possível carregar sua inscrição. Confira as regras do Firestore."
+    );
   }
 });
 
-// Renderização dos itens estáticos com disponibilidade do Firestore
+// Renderização dos itens
 function renderItems() {
   const select = $("item");
   const previous = select.value;
-  const myClaim = currentClaims.find(c => c.uid === currentUser?.uid);
+
+  const myClaim = currentClaims.find(
+    claim => claim.uid === currentUser?.uid
+  );
+
   const myItemId = myClaim?.itemId || "";
 
   select.innerHTML = '<option value="">Selecione um item</option>';
@@ -222,10 +214,12 @@ function renderItems() {
   const groups = {};
 
   ITEMS.forEach(item => {
-    const claimed = currentClaims.filter(c => c.itemId === item.id).length;
+    const claimed = currentClaims.filter(
+      claim => claim.itemId === item.id
+    ).length;
+
     const remaining = item.capacity - claimed;
 
-    // Mantém visível o item que o próprio usuário já escolheu.
     if (remaining <= 0 && myItemId !== item.id) return;
 
     (groups[item.category] ||= []).push({
@@ -240,8 +234,8 @@ function renderItems() {
 
     rows.forEach(item => {
       const option = document.createElement("option");
-      option.value = item.id;
 
+      option.value = item.id;
       option.textContent = item.remaining > 0
         ? `${item.name} — ${item.remaining} vaga(s)`
         : `${item.name} — sua escolha`;
@@ -252,16 +246,16 @@ function renderItems() {
     select.append(group);
   });
 
-  if ([...select.options].some(o => o.value === previous)) {
+  if ([...select.options].some(option => option.value === previous)) {
     select.value = previous;
   } else if (myItemId) {
     select.value = myItemId;
   }
 
-  $("item").disabled = !$("attending").checked;
+  select.disabled = !$("attending").checked;
 }
 
-// Carrega a inscrição do usuário
+// Carrega inscrição
 async function loadReservation() {
   const ref = doc(db, "reservations", currentUser.uid);
   const snap = await getDoc(ref);
@@ -287,13 +281,16 @@ $("attending").onchange = () => {
   $("item").disabled = !$("attending").checked;
 };
 
-// Salva inscrição e contribuição
+// Salva inscrição
 $("reservation").onsubmit = async event => {
   event.preventDefault();
 
   if (!currentUser) return;
 
-  const button = $("reservation").querySelector('button[type="submit"]');
+  const button = $("reservation").querySelector(
+    'button[type="submit"]'
+  );
+
   setBusy(button, true, "Salvando...");
 
   try {
@@ -302,34 +299,30 @@ $("reservation").onsubmit = async event => {
     const guests = Number($("guests").value);
     const itemId = attending ? $("item").value : "";
 
-    if (!name) throw new Error("Informe seu nome.");
+    if (!name) {
+      throw new Error("Informe seu nome.");
+    }
+
     if (!Number.isInteger(guests) || guests < 0 || guests > 10) {
       throw new Error("Informe uma quantidade válida de acompanhantes.");
     }
+
     if (attending && !itemById(itemId)) {
       throw new Error("Escolha um item válido para levar.");
     }
 
-    
     const reservationRef = doc(db, "reservations", currentUser.uid);
     const claimRef = doc(db, "claims", currentUser.uid);
 
-    // Consulta as contribuições antes da transação.
     const claimsSnapshot = await getDocs(collection(db, "claims"));
 
     await runTransaction(db, async transaction => {
-      const [reservationSnap, claimSnap] = await Promise.all([
-        transaction.get(reservationRef),
-        transaction.get(claimRef)
-      ]);
-
-      const oldItemId = claimSnap.exists()
-        ? claimSnap.data().itemId
-        : "";
+      const claimSnap = await transaction.get(claimRef);
 
       if (attending) {
         const claimedByOthers = claimsSnapshot.docs.filter(d =>
-          d.id !== currentUser.uid && d.data().itemId === itemId
+          d.id !== currentUser.uid &&
+          d.data().itemId === itemId
         ).length;
 
         const selectedItem = itemById(itemId);
@@ -357,11 +350,13 @@ $("reservation").onsubmit = async event => {
       });
     });
 
-
     alert("Participação salva com sucesso!");
+
     await loadReservation();
 
-    if (isAdmin(userEmail())) await loadAdmin();
+    if (isAdmin(userEmail())) {
+      await loadAdmin();
+    }
   } catch (error) {
     console.error(error);
     alert(error.message || "Não foi possível salvar sua participação.");
@@ -409,7 +404,8 @@ async function loadAdmin() {
   const people = reservationsSnap.docs.map(d => d.data());
   const claims = claimsSnap.docs.map(d => d.data());
 
-  const confirmed = people.filter(p => p.attending);
+  const confirmed = people.filter(person => person.attending);
+
   const totalPeople = confirmed.reduce(
     (sum, person) => sum + 1 + Number(person.guests || 0),
     0
@@ -420,26 +416,32 @@ async function loadAdmin() {
       <b>${confirmed.length}</b>
       <span>Inscrições confirmadas</span>
     </div>
+
     <div class="stat">
       <b>${totalPeople}</b>
       <span>Pessoas no total</span>
     </div>
+
     <div class="stat">
       <b>${ITEMS.filter(item =>
-        claims.filter(c => c.itemId === item.id).length < item.capacity
+        claims.filter(claim => claim.itemId === item.id).length < item.capacity
       ).length}</b>
       <span>Itens com vagas</span>
     </div>
   `;
 
   $("inventory").innerHTML = ITEMS.map(item => {
-    const claimed = claims.filter(c => c.itemId === item.id).length;
+    const claimed = claims.filter(
+      claim => claim.itemId === item.id
+    ).length;
 
     return `
       <div class="item-row">
-        <span>${esc(item.name)}
+        <span>
+          ${esc(item.name)}
           <span class="muted">(${esc(item.category)})</span>
         </span>
+
         <strong>${claimed}/${item.capacity}</strong>
       </div>
     `;
@@ -451,11 +453,15 @@ async function loadAdmin() {
         ${esc(person.name)}
         <br>
         <small class="muted">
-          ${esc(person.email)} · ${Number(person.guests || 0)} acompanhante(s)
-          · ${esc(itemById(person.itemId)?.name || "Sem item")}
+          ${esc(person.email)} ·
+          ${Number(person.guests || 0)} acompanhante(s) ·
+          ${esc(itemById(person.itemId)?.name || "Sem item")}
         </small>
       </span>
-      <strong>${person.attending ? "Confirmado" : "Não irá"}</strong>
+
+      <strong>
+        ${person.attending ? "Confirmado" : "Não irá"}
+      </strong>
     </div>
   `).join("") || '<p class="muted">Ainda não há inscrições.</p>';
 }
@@ -470,37 +476,7 @@ function esc(value) {
   })[char]);
 }
 
-// Autoriza convidados pelo painel
-$("addGuest").onclick = async () => {
-  if (!isAdmin(userEmail())) return;
-
-  const email = $("guestEmail").value.trim().toLowerCase();
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    $("guestMessage").textContent = "Informe um e-mail válido.";
-    return;
-  }
-
-  if (isAdmin(email)) {
-    $("guestMessage").textContent = "Esse e-mail já é administrador.";
-    return;
-  }
-
-  try {
-    await setDoc(doc(db, "allowlist", email), {
-      email,
-      addedBy: userEmail(),
-      addedAt: serverTimestamp()
-    });
-
-    $("guestMessage").textContent = "Convidado autorizado com sucesso.";
-    $("guestEmail").value = "";
-  } catch (error) {
-    console.error(error);
-    $("guestMessage").textContent = "Não foi possível autorizar. Verifique as regras do Firestore.";
-  }
-};
-
+// Atualizar painel
 $("refresh").onclick = () => {
   loadAdmin().catch(error => {
     console.error(error);
