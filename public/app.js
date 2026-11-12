@@ -330,8 +330,15 @@ $("reservation").onsubmit = async event => {
 
     const claimsSnapshot = await getDocs(collection(db, "claims"));
 
+
     await runTransaction(db, async transaction => {
+      const reservationSnap = await transaction.get(reservationRef);
       const claimSnap = await transaction.get(claimRef);
+
+      // Impede uma segunda inscrição
+      if (reservationSnap.exists() || claimSnap.exists()) {
+        throw new Error("Sua inscrição já foi realizada. Não é possível votar novamente.");
+      }
 
       if (attending) {
         const claimedByOthers = claimsSnapshot.docs.filter(d =>
@@ -349,8 +356,6 @@ $("reservation").onsubmit = async event => {
           uid: currentUser.uid,
           itemId
         });
-      } else {
-        transaction.delete(claimRef);
       }
 
       transaction.set(reservationRef, {
@@ -359,9 +364,10 @@ $("reservation").onsubmit = async event => {
         name,
         attending,
         itemId: attending ? itemId : null,
-        updatedAt: serverTimestamp()
+        createdAt: serverTimestamp()
       });
     });
+
 
     $("receiptName").textContent = name;
     $("receiptItem").textContent = itemById(itemId)?.name || "";
