@@ -953,6 +953,19 @@ select {
 }
 
 .nav-btn {
+  height: 44px;        /* 52px × 0,85 */
+  border-radius: 14px; /* 16px × 0,85 */
+}
+
+.uber-name { font-size: 20px; }  /* 24px × 0,85 */
+.waze-name { font-size: 19px; }  /* 22px × 0,85 */
+
+.waze-icon {
+  width: 24px;          /* 28px × 0,85 */
+  height: 24px;
+}
+
+.nav-btn {
   min-width: 0;
   height: 52px;
   padding: 0 10px;
