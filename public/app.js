@@ -381,32 +381,6 @@ $("reservation").onsubmit = async event => {
   }
 };
 
-// Cancela inscrição
-$("cancel").onclick = async () => {
-  if (!currentUser) return;
-
-  if (!confirm("Deseja cancelar sua inscrição?")) return;
-
-  try {
-    const reservationRef = doc(db, "reservations", currentUser.uid);
-    const claimRef = doc(db, "claims", currentUser.uid);
-
-    await runTransaction(db, async transaction => {
-      transaction.delete(reservationRef);
-      transaction.delete(claimRef);
-    });
-
-    $("reservation").reset();
-    $("attending").checked = true;
-    $("guests").value = 0;
-    $("item").disabled = false;
-
-    alert("Inscrição cancelada.");
-  } catch (error) {
-    console.error(error);
-    alert(error.message || "Não foi possível cancelar a inscrição.");
-  }
-};
 
 // Painel administrativo
 async function loadAdmin() {
