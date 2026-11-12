@@ -813,8 +813,51 @@ $("refresh").onclick = () => {
   });
 };
 
-const EVENT_ADDRESS = "R. Francisco Tapajós, 359 - Vila da Saúde";
+const EVENT_ADDRESS = "R. Francisco Tapajós, 359 - Vila da Saúde, São Paulo - SP";
+const EVENT_NICKNAME = "Open House BBQ";
+const EVENT_COORDS = { lat: -23.6261209, lng: -46.6249828 };
 const encodedAddress = encodeURIComponent(EVENT_ADDRESS);
+const encodedNickname = encodeURIComponent(EVENT_NICKNAME);
+
+const UBER_WEB_URL =
+  `https://m.uber.com/ul/?action=setPickup` +
+  `&dropoff[latitude]=${EVENT_COORDS.lat}` +
+  `&dropoff[longitude]=${EVENT_COORDS.lng}` +
+  `&dropoff[formatted_address]=${encodedAddress}` +
+  `&dropoff[nickname]=${encodedNickname}`;
+
+const UBER_APP_URL =
+  `uber://riderequest?dropoff[latitude]=${EVENT_COORDS.lat}` +
+  `&dropoff[longitude]=${EVENT_COORDS.lng}` +
+  `&dropoff[formatted_address]=${encodedAddress}` +
+  `&dropoff[nickname]=${encodedNickname}`;
+
+const WAZE_WEB_URL =
+  `https://waze.com/ul?ll=${EVENT_COORDS.lat}%2C${EVENT_COORDS.lng}` +
+  `&navigate=yes&zoom=17&q=${encodedAddress}`;
+
+const WAZE_APP_URL =
+  `waze://?ll=${EVENT_COORDS.lat},${EVENT_COORDS.lng}&navigate=yes`;
+
+function openNavApp({ appUrl, webUrl }) {
+  const mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  if (!mobile) {
+    window.open(webUrl, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  let left = false;
+  const markLeft = () => { left = true; };
+  document.addEventListener("visibilitychange", markLeft, { once: true });
+  window.addEventListener("pagehide", markLeft, { once: true });
+
+  window.location.href = appUrl;
+
+  window.setTimeout(() => {
+    if (!left) window.location.href = webUrl;
+  }, 1100);
+}
 
 function closeHistory() {
   $("history").classList.add("hidden");
@@ -893,11 +936,18 @@ async function openHistory() {
   `;
 }
 
-$("uberLink").href =
-  `https://m.uber.com/ul/?action=setPickup&dropoff[formatted_address]=${encodedAddress}`;
+$("uberLink").href = UBER_WEB_URL;
+$("wazeLink").href = WAZE_WEB_URL;
 
-$("wazeLink").href =
-  `https://waze.com/ul?q=${encodedAddress}&navigate=yes`;
+$("uberLink").addEventListener("click", event => {
+  event.preventDefault();
+  openNavApp({ appUrl: UBER_APP_URL, webUrl: UBER_WEB_URL });
+});
+
+$("wazeLink").addEventListener("click", event => {
+  event.preventDefault();
+  openNavApp({ appUrl: WAZE_APP_URL, webUrl: WAZE_WEB_URL });
+});
 
 async function copyAddress(button) {
   try {
@@ -1119,100 +1169,188 @@ function drawReport(report) {
   return canvas;
 }
 
+function splitItemLabel(item) {
+  const raw = String(item || "Sem contribuição").trim();
+  const chars = [...raw];
+  const icon = chars[0] || "";
+  const title = chars.slice(1).join("").trim();
+  const hasIcon = icon && title && /\p{Extended_Pictographic}/u.test(icon);
+  return hasIcon ? { icon, title } : { icon: "", title: raw };
+}
+
+function drawTicketZigzag(ctx, width, y, tooth = 10) {
+  const h = 14;
+  ctx.beginPath();
+  ctx.moveTo(0, y + h);
+  for (let x = 0; x <= width; x += tooth) {
+    ctx.lineTo(x + tooth / 2, y);
+    ctx.lineTo(x + tooth, y + h);
+  }
+  ctx.closePath();
+  ctx.fillStyle = "#050505";
+  ctx.fill();
+  ctx.strokeStyle = "#171719";
+  ctx.lineWidth = 1.25;
+  ctx.stroke();
+  return y + h;
+}
+
 function drawVoucher(name, item) {
-  const width = 900;
-  const height = 900;
+  const width = 420;
+  const padX = 18;
+  const cardPad = 12;
+  const height = 720;
   const { canvas, ctx } = makeCanvas(width, height);
 
+  // fundo transparente → preto sólido pra PNG
   ctx.fillStyle = "#050505";
   ctx.fillRect(0, 0, width, height);
-  ctx.fillStyle = "#141416";
-  roundedRect(ctx, 48, 48, width - 96, height - 96, 36);
-  ctx.fill();
+
+  let y = 0;
+  y = drawTicketZigzag(ctx, width, y, 10);
+
+  // corpo do ticket
+  ctx.fillStyle = "#050505";
+  ctx.fillRect(0, y - 1, width, height - (y - 1));
+  ctx.strokeStyle = "#171719";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, y - 1, width - 1, height - (y - 1) - 0.5);
 
   const cx = width / 2;
+  y += 28;
+
+  // ícone check
   ctx.beginPath();
-  ctx.fillStyle = "rgba(48, 209, 88, 0.16)";
-  ctx.arc(cx, 140, 36, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(48, 209, 88, 0.14)";
+  ctx.arc(cx, y + 24, 24, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = "#30d158";
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 2.4;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   ctx.beginPath();
-  ctx.moveTo(cx - 14, 140);
-  ctx.lineTo(cx - 4, 152);
-  ctx.lineTo(cx + 16, 128);
+  ctx.moveTo(cx - 9, y + 24);
+  ctx.lineTo(cx - 2, y + 32);
+  ctx.lineTo(cx + 11, y + 16);
   ctx.stroke();
+  y += 60;
 
   ctx.textAlign = "center";
   ctx.fillStyle = "#ff7a3c";
-  ctx.font = canvasFont(650, 18);
-  ctx.fillText("OPEN HOUSE BBQ", cx, 196);
+  ctx.font = canvasFont(650, 11);
+  ctx.fillText("OPEN HOUSE BBQ", cx, y);
+  y += 22;
+
   ctx.fillStyle = "#f5f5f7";
-  ctx.font = canvasFont(600, 48);
-  ctx.fillText("Presença confirmada!", cx, 232);
+  ctx.font = canvasFont(600, 28);
+  ctx.fillText("Presença confirmada!", cx, y);
+  y += 28;
+
   ctx.fillStyle = "#98989f";
-  ctx.font = canvasFont(500, 22);
-  ctx.fillText("Estamos esperando por você.", cx, 296);
+  ctx.font = canvasFont(500, 14);
+  ctx.fillText("Estamos esperando por você.", cx, y);
+  y += 28;
+
+  // card interno
+  const cardX = padX;
+  const cardW = width - padX * 2;
+  const cardTop = y;
+  const cardH = 320;
+  ctx.fillStyle = "#0a0a0a";
+  roundedRect(ctx, cardX, cardTop, cardW, cardH, 14);
+  ctx.fill();
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
+  ctx.lineWidth = 1;
+  roundedRect(ctx, cardX, cardTop, cardW, cardH, 14);
+  ctx.stroke();
+  ctx.setLineDash([]);
 
   ctx.textAlign = "left";
-  const left = 96;
-  const right = width - 96;
-  let y = 360;
-  const line = () => {
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(left, y);
-    ctx.lineTo(right, y);
-    ctx.stroke();
-    y += 28;
-  };
-  const label = text => {
+  let cy = cardTop + cardPad + 2;
+  const left = cardX + cardPad;
+  const innerW = cardW - cardPad * 2;
+
+  const drawLabel = text => {
     ctx.fillStyle = "#6e6e73";
-    ctx.font = canvasFont(650, 14);
-    ctx.fillText(text, left, y);
-    y += 28;
-  };
-  const value = text => {
-    ctx.fillStyle = "#f5f5f7";
-    ctx.font = canvasFont(600, 32);
-    ctx.fillText(fitText(ctx, text || "—", right - left), left, y);
-    y += 48;
+    ctx.font = canvasFont(650, 9);
+    ctx.fillText(text.toUpperCase(), left, cy);
+    cy += 16;
   };
 
-  line();
-  label("SEU NOME");
-  value(name);
-  line();
-  label("SUA CONTRIBUIÇÃO");
-  value(item);
-  line();
+  const drawDivider = () => {
+    cy += 6;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 4]);
+    ctx.beginPath();
+    ctx.moveTo(left, cy);
+    ctx.lineTo(left + innerW, cy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    cy += 14;
+  };
+
+  drawLabel("Seu nome");
+  ctx.fillStyle = "#f5f5f7";
+  ctx.font = canvasFont(600, 15);
+  ctx.fillText(fitText(ctx, name || "—", innerW), left, cy);
+  cy += 22;
+  drawDivider();
+
+  drawLabel("Sua contribuição");
+  const { icon, title } = splitItemLabel(item);
+  ctx.fillStyle = "#f5f5f7";
+  ctx.font = canvasFont(600, 15);
+  if (icon) {
+    ctx.fillText(icon, left, cy);
+    const iconW = ctx.measureText(icon).width;
+    ctx.fillText(fitText(ctx, title, innerW - iconW - 8), left + iconW + 8, cy);
+  } else {
+    ctx.fillText(fitText(ctx, title, innerW), left, cy);
+  }
+  cy += 22;
+  drawDivider();
 
   const cols = [
-    ["DATA", "12/12/2026"],
-    ["HORÁRIO", "13:00"],
-    ["LOCAL", "Salão de festa"]
+    ["Data", "12/12/2026"],
+    ["Horário", "13:00"],
+    ["Local", "Salão de festa"]
   ];
-  const colW = (right - left) / 3;
-  cols.forEach(([title, text], index) => {
+  const colW = innerW / 3;
+  cols.forEach(([label, value], index) => {
     const x = left + colW * index;
     ctx.fillStyle = "#6e6e73";
-    ctx.font = canvasFont(650, 14);
-    ctx.fillText(title, x, y);
+    ctx.font = canvasFont(650, 9);
+    ctx.fillText(label.toUpperCase(), x, cy);
     ctx.fillStyle = "#f5f5f7";
-    ctx.font = canvasFont(600, 22);
-    ctx.fillText(text, x, y + 28);
+    ctx.font = canvasFont(600, 12);
+    ctx.fillText(fitText(ctx, value, colW - 6), x, cy + 16);
   });
-  y += 78;
-  line();
-  label("ENDEREÇO");
+  cy += 42;
+
+  // endereço (sem botão copiar / waze / uber)
+  ctx.fillStyle = "#0e0e10";
+  roundedRect(ctx, left, cy, innerW, 58, 10);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+  ctx.lineWidth = 1;
+  roundedRect(ctx, left, cy, innerW, 58, 10);
+  ctx.stroke();
+
+  ctx.fillStyle = "#6e6e73";
+  ctx.font = canvasFont(650, 8);
+  ctx.fillText("ENDEREÇO", left + 12, cy + 12);
   ctx.fillStyle = "#f5f5f7";
-  ctx.font = canvasFont(500, 24);
-  ctx.fillText("R. Francisco Tapajós, 359", left, y);
-  y += 34;
-  ctx.fillText("Vila da Saúde", left, y);
+  ctx.font = canvasFont(600, 12);
+  ctx.fillText("R. Francisco Tapajós, 359", left + 12, cy + 28);
+  ctx.fillText("Vila da Saúde", left + 12, cy + 44);
+
+  y = cardTop + cardH + 18;
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#6e6e73";
+  ctx.font = canvasFont(500, 12);
+  ctx.fillText("Guarde esta confirmação. Nos vemos lá.", cx, y);
 
   return canvas;
 }
@@ -1246,16 +1384,87 @@ $("exportAdmin").onclick = async () => {
   }
 };
 
+async function loadHtml2Canvas() {
+  if (window.html2canvas) return window.html2canvas;
+
+  await new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+    script.onload = resolve;
+    script.onerror = () => reject(new Error("Falha ao carregar gerador de imagem."));
+    document.head.appendChild(script);
+  });
+
+  return window.html2canvas;
+}
+
+async function captureVoucherCanvas() {
+  const source = document.querySelector("#receipt .sheet.ticket");
+  if (!source) throw new Error("Voucher não encontrado.");
+
+  const clone = source.cloneNode(true);
+  clone.querySelectorAll(".receipt-exit, .nav-buttons, .sheet-backdrop").forEach(el => el.remove());
+
+  const copyBtn = clone.querySelector(".copy-btn");
+  if (copyBtn) {
+    const label = copyBtn.querySelector(".copy-label");
+    const address = document.createElement("div");
+    address.className = "voucher-address";
+    address.innerHTML = label ? label.innerHTML : copyBtn.innerHTML;
+    copyBtn.replaceWith(address);
+  }
+
+  const body = clone.querySelector(".ticket-body");
+  if (body) {
+    body.style.maxHeight = "none";
+    body.style.overflow = "visible";
+    body.style.paddingBottom = "24px";
+  }
+
+  clone.style.cssText = [
+    "position:fixed",
+    "left:-10000px",
+    "top:0",
+    "width:420px",
+    "max-height:none",
+    "margin:0",
+    "animation:none",
+    "filter:none",
+    "z-index:-1"
+  ].join(";");
+
+  document.body.appendChild(clone);
+
+  try {
+    const html2canvas = await loadHtml2Canvas();
+    return await html2canvas(clone, {
+      backgroundColor: "#050505",
+      scale: 2,
+      useCORS: true,
+      logging: false
+    });
+  } finally {
+    clone.remove();
+  }
+}
+
 $("downloadVoucher").onclick = async () => {
   const button = $("downloadVoucher");
   setBusy(button, true, "Gerando...");
   try {
     await paintWhenReady();
     const name = $("receiptName").textContent.trim() || "Convidado";
-    const item = $("receiptItem").dataset.label?.trim()
-      || $("receiptItem").textContent.trim()
-      || "Sem contribuição";
-    downloadCanvas(drawVoucher(name, item), `voucher-${fileSlug(name)}.png`);
+    let canvas;
+    try {
+      canvas = await captureVoucherCanvas();
+    } catch (captureError) {
+      console.warn(captureError);
+      const item = $("receiptItem").dataset.label?.trim()
+        || $("receiptItem").textContent.trim()
+        || "Sem contribuição";
+      canvas = drawVoucher(name, item);
+    }
+    downloadCanvas(canvas, `voucher-${fileSlug(name)}.png`);
   } catch (error) {
     console.error(error);
     showToast({
