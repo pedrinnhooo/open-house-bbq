@@ -66,19 +66,21 @@ $("logout").onclick = async () => {
 };
 
 
+
 const ITEMS = [
-  ["carne-bovina", "Carne bovina", "Churrasco", 6],
-  ["linguica", "Linguiça", "Churrasco", 4],
-  ["frango", "Frango", "Churrasco", 6],
-  ["pao-alho", "Pão de alho", "Churrasco", 6],
-  ["queijo", "Queijo coalho", "Churrasco", 6]
-].map(([id, name, category, capacity]) => ({
+  ["carne-bovina", "🥩 Carne bovina", 12],
+  ["linguica", "🌭 Linguiça", 7],
+  ["frango", "🍗 Frango", 6],
+  ["pao-alho", "🥖 Pão de alho", 6],
+  ["queijo", "🧀 Queijo coalho", 4]
+].map(([id, name, capacity]) => ({
   id,
   name,
-  category,
+  category: "Churrasco",
   capacity,
   active: true
 }));
+
 
 
 const isAdmin = email =>
