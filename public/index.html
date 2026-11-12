@@ -1,15 +1,18 @@
-
 <!doctype html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#241a16">
   <title>Open House BBQ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
 
@@ -18,24 +21,24 @@
       <span class="brand-icon">🔥</span>
       <span>OPEN HOUSE <b>BBQ</b></span>
     </a>
-  
+
     <nav class="desktop-nav">
       <a href="#app">Minha participação</a>
       <a href="#admin">Organizador</a>
     </nav>
-  
+
     <div class="header-account">
       <button id="login" class="glass-button">
         Entrar com Google
       </button>
-  
+
       <div id="userMenu" class="user-menu hidden">
         <button id="userMenuButton" class="user-menu-button" type="button">
           <img id="userAvatar" src="" alt="Foto do perfil">
           <span id="userName">Minha conta</span>
           <span class="chevron">⌄</span>
         </button>
-  
+
         <div id="userDropdown" class="user-dropdown hidden">
           <div class="user-dropdown-info">
             <strong id="dropdownName"></strong>
@@ -46,8 +49,8 @@
       </div>
     </div>
   </header>
-  
-  
+
+
 
   <main>
     <section class="hero">
@@ -80,10 +83,6 @@
           Vou participar do Open House
         </label>
 
-        <label>Quantidade de acompanhantes (além de você)
-          <input id="guests" type="number" min="0" max="10" value="0">
-        </label>
-
         <label>O que você gostaria de levar?
           <select id="item">
             <option value="">Carregando opções...</option>
@@ -93,7 +92,6 @@
         <p class="hint">Quando um item atingir o limite, ele deixa de aparecer como opção.</p>
 
         <button class="primary" type="submit">Salvar minha participação</button>
-        <button class="text-button" type="button" id="cancel">Cancelar minha inscrição</button>
       </form>
     </section>
 
@@ -124,9 +122,58 @@
       <button id="refresh" class="light" type="button">Atualizar painel</button>
     </section>
 
+
+    <section id="receipt" class="receipt hidden">
+      <div class="receipt-icon">✓</div>
+      <p class="eyebrow">OPEN HOUSE BBQ</p>
+      <h1>Presença confirmada!</h1>
+      <p>Estamos esperando por você.</p>
+
+      <div class="receipt-card">
+        <span class="receipt-label">SEU NOME</span>
+        <h2 id="receiptName"></h2>
+
+        <div class="receipt-divider"></div>
+
+        <span class="receipt-label">SUA CONTRIBUIÇÃO</span>
+        <h2 id="receiptItem"></h2>
+
+        <div class="receipt-divider"></div>
+
+        <span class="receipt-label">DATA</span>
+        <p>12/12/2026</p>
+
+        <span class="receipt-label">HORÁRIO</span>
+        <p>13:00h</p>
+
+        <span class="receipt-label">LOCAL</span>
+        <p>Salão de festa</p>
+
+        <span class="receipt-label">ENDEREÇO</span>
+        <p>R. Francisco Tapajós, 359 - Vila da Saúde</p>
+      </div>
+
+      <p class="receipt-footer">
+        Guarde esta confirmação. Nos vemos lá! ❤️
+      </p>
+    </section>
+
+    <div id="successModal" class="success-modal hidden">
+      <div class="success-modal-card">
+        <div class="receipt-icon">✓</div>
+        <h2>Inscrição realizada!</h2>
+        <p>Sua contribuição foi registrada com sucesso.</p>
+        <button id="showReceipt" class="primary" type="button">
+          Ver minha confirmação
+        </button>
+      </div>
+    </div>
+
+
     <footer>Feito para reunir pessoas, boas conversas e um ótimo churrasco. ❤️</footer>
   </main>
 
   <script type="module" src="app.js"></script>
 </body>
+
 </html>
