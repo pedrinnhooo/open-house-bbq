@@ -498,3 +498,6 @@ $("copyAddress").addEventListener("click", async () => {
       "Não foi possível copiar. Selecione o endereço manualmente.";
   }
 });
+
+copyAddress.classList.add("is-copied");
+setTimeout(() => copyAddress.classList.remove("is-copied"), 1800);
