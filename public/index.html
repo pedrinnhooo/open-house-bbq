@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=48">
+  <link rel="stylesheet" href="style.css?v=94">
   <link rel="icon" href="favicon.ico?v=3" sizes="any">
   <link rel="icon" type="image/png" href="favicon.png?v=3" sizes="32x32">
   <script>
@@ -64,7 +64,7 @@
     <span class="sm tw" style="left:96%;top:70%"></span>
   </div>
   <header class="top">
-    <a class="brand" href="#">Open House <em>BBQ</em></a>
+    <a class="brand" href="#"><img class="brand-logo" src="fire.png" alt="" width="13" height="13">Open House <em>BBQ</em></a>
 
     <div class="header-account">
       <button id="login" class="glass-button" type="button">
@@ -98,8 +98,18 @@
 
   <main>
     <nav id="viewTabs" class="tabs hidden" aria-label="Seções">
-      <button id="tabHome" class="tab is-active" type="button" aria-selected="true">Início</button>
-      <button id="tabAdmin" class="tab" type="button" aria-selected="false">Painel</button>
+      <button id="tabHome" class="tab is-active" type="button" aria-selected="true">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        </svg>
+        Início
+      </button>
+      <button id="tabAdmin" class="tab" type="button" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 5h16v4H4V5Zm0 7h7v7H4v-7Zm10 0h6v7h-6v-7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        </svg>
+        Painel
+      </button>
     </nav>
 
     <div id="homeView">
@@ -111,14 +121,17 @@
         <p class="lede">Confirme sua presença e escolha o que vai levar. As vagas são limitadas para garantir variedade na mesa.</p>
         <p class="notice login-note">Entre com sua conta Google para participar.</p>
         <section id="notice" class="notice">
-          <div class="notice-icon" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
-                stroke-linejoin="round" />
-            </svg>
+          <div class="notice-status">
+            <div class="notice-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+            </div>
+            <p id="noticeTitle"></p>
+            <p id="noticeText" class="notice-text"></p>
           </div>
-          <p id="noticeTitle"></p>
-          <p id="noticeText" class="notice-text"></p>
+          <span class="notice-divider" aria-hidden="true"></span>
           <button id="openVoucher" class="notice-link hidden" type="button">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M4 8.5V6.8A1.8 1.8 0 0 1 5.8 5h12.4A1.8 1.8 0 0 1 20 6.8v1.7a2.2 2.2 0 0 0 0 4.4v1.7a1.8 1.8 0 0 1-1.8 1.8H5.8A1.8 1.8 0 0 1 4 14.6v-1.7a2.2 2.2 0 0 0 0-4.4Z" stroke="currentColor" stroke-width="1.7"/>
@@ -205,6 +218,29 @@
     </div>
 
     <section id="admin" class="panel hidden">
+      <div class="admin-actions">
+        <button id="exportAdmin" class="admin-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Exportar
+        </button>
+        <button id="refresh" class="admin-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4.5 12a7.5 7.5 0 0 1 12.7-5.4M19.5 12a7.5 7.5 0 0 1-12.7 5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M17.2 3.8v3.8H13.4M6.8 20.2v-3.8h3.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Atualizar
+        </button>
+        <button id="backToReceipt" class="admin-btn hidden" type="button">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 8.5V6.8A1.8 1.8 0 0 1 5.8 5h12.4A1.8 1.8 0 0 1 20 6.8v1.7a2.2 2.2 0 0 0 0 4.4v1.7a1.8 1.8 0 0 1-1.8 1.8H5.8A1.8 1.8 0 0 1 4 14.6v-1.7a2.2 2.2 0 0 0 0-4.4Z" stroke="currentColor" stroke-width="1.7"/>
+            <path d="M12 7.5v9" stroke="currentColor" stroke-width="1.7" stroke-dasharray="2 2"/>
+          </svg>
+          Voucher
+        </button>
+      </div>
+
       <div class="section-head">
         <div>
           <p class="eyebrow">Visão do organizador</p>
@@ -215,104 +251,108 @@
 
       <div id="stats" class="stats"></div>
 
-      <h3>Disponibilidade dos itens</h3>
-      <div id="inventory" class="inventory"></div>
-
-      <h3>Inscrições</h3>
-      <div id="attendees" class="attendees"></div>
-
-      <div class="admin-actions">
-        <button id="exportAdmin" class="light" type="button">Exportar imagem</button>
-        <button id="refresh" class="light" type="button">Atualizar painel</button>
-        <button id="backToReceipt" class="light hidden" type="button">Ver minha confirmação</button>
+      <div class="admin-board">
+        <div class="admin-board-col">
+          <h3>Disponibilidade dos itens</h3>
+          <div id="inventory" class="inventory"></div>
+        </div>
+        <div class="admin-board-col">
+          <h3>Inscrições</h3>
+          <div id="attendees" class="attendees"></div>
+        </div>
       </div>
     </section>
 
     <section id="receipt" class="receipt hidden" aria-label="Voucher">
       <button id="closeSheet" class="sheet-backdrop" type="button" aria-label="Fechar voucher"></button>
-      <div class="sheet">
-        <div class="sheet-handle" aria-hidden="true"></div>
-        <div class="receipt-icon" aria-hidden="true">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-            <path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
-              stroke-linejoin="round" />
-          </svg>
-        </div>
-        <p class="eyebrow">Open House BBQ</p>
-        <h1>Presença confirmada!</h1>
-        <p class="lede">Estamos esperando por você.</p>
-
-      <div class="receipt-card">
-        <span class="receipt-label">Seu nome</span>
-        <h2 id="receiptName"></h2>
-
-        <div class="receipt-divider"></div>
-
-        <span class="receipt-label">Sua contribuição</span>
-        <h2 id="receiptItem"></h2>
-
-        <div class="receipt-divider"></div>
-
-        <div class="receipt-meta">
-          <div>
-            <span class="receipt-label">Data</span>
-            <p>12/12/2026</p>
-          </div>
-          <div>
-            <span class="receipt-label">Horário</span>
-            <p>13:00</p>
-          </div>
-          <div>
-            <span class="receipt-label">Local</span>
-            <p>Salão de festa</p>
-          </div>
-        </div>
-
-        <button id="copyAddress" class="copy-btn" type="button">
-          <span class="copy-label">
-            <small>Endereço</small>
-            <span class="copy-address">R. Francisco Tapajós, 359<br>Vila da Saúde</span>
-          </span>
-          <span class="copy-icon" aria-hidden="true">
-            <svg class="icon-copy" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      <div class="sheet ticket">
+        <svg class="ticket-zigzag" viewBox="0 0 100 14" preserveAspectRatio="none" aria-hidden="true">
+          <path class="ticket-zigzag-fill" d="M0 14 L5 0 L10 14 L15 0 L20 14 L25 0 L30 14 L35 0 L40 14 L45 0 L50 14 L55 0 L60 14 L65 0 L70 14 L75 0 L80 14 L85 0 L90 14 L95 0 L100 14 Z"/>
+          <path class="ticket-zigzag-stroke" d="M0 14 L5 0 L10 14 L15 0 L20 14 L25 0 L30 14 L35 0 L40 14 L45 0 L50 14 L55 0 L60 14 L65 0 L70 14 L75 0 L80 14 L85 0 L90 14 L95 0 L100 14"/>
+        </svg>
+        <div class="ticket-body">
+          <div class="receipt-icon" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+              <path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                stroke-linejoin="round" />
             </svg>
-            <svg class="icon-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2.4">
-              <path d="M20 6 9 17l-5-5"></path>
-            </svg>
-          </span>
-        </button>
+          </div>
+          <p class="eyebrow">Open House BBQ</p>
+          <h1>Presença confirmada!</h1>
+          <p class="lede">Estamos esperando por você.</p>
 
-        <div class="nav-buttons">
-          <a id="uberLink" class="nav-btn nav-uber" href="#" target="_blank" rel="noopener noreferrer"
-            aria-label="Abrir no Uber">
-            <span class="brand-name uber-name">Uber</span>
-          </a>
+          <div class="receipt-card">
+            <span class="receipt-label">Seu nome</span>
+            <h2 id="receiptName"></h2>
 
-          <a id="wazeLink" class="nav-btn nav-waze" href="#" target="_blank" rel="noopener noreferrer"
-            aria-label="Abrir no Waze">
-            <svg class="waze-icon" viewBox="0 0 64 64" aria-hidden="true">
-              <path fill="#fff"
-                d="M32 6C18.7 6 8.5 15.8 8.5 28.3c0 4.3 1.2 8.2 3.3 11.5-.9 2.4-2.4 4.4-4.3 5.8-.8.6-.4 1.9.6 2 3.4.3 6.7-.4 9.5-2.1 4.1 2.6 9 4 14.4 4h.2c13.3 0 23.5-9.8 23.5-22.3S45.3 6 32 6Z" />
-              <circle cx="24" cy="26" r="3" fill="#1a1a1a" />
-              <circle cx="40" cy="26" r="3" fill="#1a1a1a" />
-              <path d="M23 34c2.4 3.6 5.6 5.2 9 5.2s6.6-1.6 9-5.2" fill="none" stroke="#1a1a1a" stroke-width="3"
-                stroke-linecap="round" />
-              <circle cx="21" cy="52" r="5" fill="#1a1a1a" stroke="#fff" stroke-width="2" />
-              <circle cx="43" cy="52" r="5" fill="#1a1a1a" stroke="#fff" stroke-width="2" />
-            </svg>
-            <span class="brand-name waze-name">waze</span>
-          </a>
+            <div class="receipt-divider"></div>
+
+            <span class="receipt-label">Sua contribuição</span>
+            <h2 id="receiptItem"></h2>
+
+            <div class="receipt-divider"></div>
+
+            <div class="receipt-meta">
+              <div>
+                <span class="receipt-label">Data</span>
+                <p>12/12/2026</p>
+              </div>
+              <div>
+                <span class="receipt-label">Horário</span>
+                <p>13:00</p>
+              </div>
+              <div>
+                <span class="receipt-label">Local</span>
+                <p>Salão de festa</p>
+              </div>
+            </div>
+
+            <button id="copyAddress" class="copy-btn" type="button">
+              <span class="copy-label">
+                <small>Endereço</small>
+                <span class="copy-address">R. Francisco Tapajós, 359<br>Vila da Saúde</span>
+              </span>
+              <span class="copy-icon" aria-hidden="true">
+                <svg class="icon-copy" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <svg class="icon-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2.4">
+                  <path d="M20 6 9 17l-5-5"></path>
+                </svg>
+              </span>
+            </button>
+
+            <div class="nav-buttons">
+              <a id="uberLink" class="nav-btn nav-uber" href="#" target="_blank" rel="noopener noreferrer"
+                aria-label="Abrir no Uber">
+                <span class="brand-name uber-name">Uber</span>
+              </a>
+
+              <a id="wazeLink" class="nav-btn nav-waze" href="#" target="_blank" rel="noopener noreferrer"
+                aria-label="Abrir no Waze">
+                <svg class="waze-icon" viewBox="0 0 64 64" aria-hidden="true">
+                  <path fill="#fff"
+                    d="M32 6C18.7 6 8.5 15.8 8.5 28.3c0 4.3 1.2 8.2 3.3 11.5-.9 2.4-2.4 4.4-4.3 5.8-.8.6-.4 1.9.6 2 3.4.3 6.7-.4 9.5-2.1 4.1 2.6 9 4 14.4 4h.2c13.3 0 23.5-9.8 23.5-22.3S45.3 6 32 6Z" />
+                  <circle cx="24" cy="26" r="3" fill="#1a1a1a" />
+                  <circle cx="40" cy="26" r="3" fill="#1a1a1a" />
+                  <path d="M23 34c2.4 3.6 5.6 5.2 9 5.2s6.6-1.6 9-5.2" fill="none" stroke="#1a1a1a" stroke-width="3"
+                    stroke-linecap="round" />
+                  <circle cx="21" cy="52" r="5" fill="#1a1a1a" stroke="#fff" stroke-width="2" />
+                  <circle cx="43" cy="52" r="5" fill="#1a1a1a" stroke="#fff" stroke-width="2" />
+                </svg>
+                <span class="brand-name waze-name">waze</span>
+              </a>
+            </div>
+          </div>
+
+          <p class="receipt-footer">Guarde esta confirmação. Nos vemos lá.</p>
+          <button id="downloadVoucher" class="light receipt-exit" type="button">Baixar voucher</button>
+          <button id="backHome" class="light receipt-exit" type="button">Voltar ao início</button>
+          <button id="openAdmin" class="light receipt-exit hidden" type="button">Abrir painel</button>
         </div>
-      </div>
-
-      <p class="receipt-footer">Guarde esta confirmação. Nos vemos lá.</p>
-      <button id="downloadVoucher" class="light receipt-exit" type="button">Baixar voucher</button>
-      <button id="backHome" class="light receipt-exit" type="button">Voltar ao início</button>
-      <button id="openAdmin" class="light receipt-exit hidden" type="button">Abrir painel</button>
       </div>
     </section>
 
@@ -332,12 +372,17 @@
 
     <section id="history" class="receipt hidden" aria-label="Histórico">
       <button id="closeHistory" class="sheet-backdrop" type="button" aria-label="Fechar histórico"></button>
-      <div class="sheet">
-        <div class="sheet-handle" aria-hidden="true"></div>
-        <p class="eyebrow">Sua conta</p>
-        <h1>Histórico</h1>
-        <p class="lede">Seus últimos churrascos.</p>
-        <div id="historyList" class="history-list"></div>
+      <div class="sheet ticket">
+        <svg class="ticket-zigzag" viewBox="0 0 100 14" preserveAspectRatio="none" aria-hidden="true">
+          <path class="ticket-zigzag-fill" d="M0 14 L5 0 L10 14 L15 0 L20 14 L25 0 L30 14 L35 0 L40 14 L45 0 L50 14 L55 0 L60 14 L65 0 L70 14 L75 0 L80 14 L85 0 L90 14 L95 0 L100 14 Z"/>
+          <path class="ticket-zigzag-stroke" d="M0 14 L5 0 L10 14 L15 0 L20 14 L25 0 L30 14 L35 0 L40 14 L45 0 L50 14 L55 0 L60 14 L65 0 L70 14 L75 0 L80 14 L85 0 L90 14 L95 0 L100 14"/>
+        </svg>
+        <div class="ticket-body">
+          <p class="eyebrow">Sua conta</p>
+          <h1>Histórico</h1>
+          <p class="lede">Cupons dos churrascos em que você entrou.</p>
+          <div id="historyList" class="history-list"></div>
+        </div>
       </div>
     </section>
 
@@ -360,7 +405,9 @@
     </footer>
   </main>
 
-  <script type="module" src="app.js?v=18"></script>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script type="module" src="app.js?v=24"></script>
 </body>
 
 </html>

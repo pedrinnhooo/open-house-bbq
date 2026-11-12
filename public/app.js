@@ -82,6 +82,110 @@ function showMessage(message) {
   $("openVoucher").classList.add("hidden");
 }
 
+let toastTimer = 0;
+
+function friendlyError(error, fallback = "Algo deu errado. Tente de novo.") {
+  const code = String(error?.code || "");
+  const message = String(error?.message || "");
+
+  if (
+    message.includes("já foi realizada") ||
+    message.includes("Não é possível votar")
+  ) {
+    return {
+      title: "Inscrição já feita",
+      text: "Sua presença já está registrada. Não dá para confirmar de novo."
+    };
+  }
+
+  if (message.includes("atingiu o limite")) {
+    return {
+      title: "Item esgotado",
+      text: "Esse item atingiu o limite. Escolha outra opção."
+    };
+  }
+
+  if (message.includes("Informe seu nome")) {
+    return { title: "Nome necessário", text: "Digite como podemos te chamar." };
+  }
+
+  if (message.includes("Escolha um item")) {
+    return {
+      title: "Falta escolher o item",
+      text: "Selecione o que você gostaria de levar."
+    };
+  }
+
+  if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+    return { title: "Login cancelado", text: "Você fechou a janela do Google." };
+  }
+
+  if (code === "auth/popup-blocked") {
+    return {
+      title: "Popup bloqueado",
+      text: "Permita popups neste site para entrar com o Google."
+    };
+  }
+
+  if (code === "auth/network-request-failed" || message.toLowerCase().includes("network")) {
+    return {
+      title: "Sem conexão",
+      text: "Verifique sua internet e tente novamente."
+    };
+  }
+
+  if (code.startsWith("permission-denied") || message.toLowerCase().includes("permission")) {
+    return {
+      title: "Sem permissão",
+      text: "Não foi possível concluir. Tente sair e entrar de novo."
+    };
+  }
+
+  if (message && !message.startsWith("Firebase:") && message.length < 120) {
+    return { title: "Atenção", text: message };
+  }
+
+  return { title: "Ops", text: fallback };
+}
+
+function showToast(input, type = "error") {
+  const toast = $("toast");
+  if (!toast) return;
+
+  const payload = typeof input === "string"
+    ? { title: type === "success" ? "Pronto" : "Ops", text: input }
+    : input;
+
+  const icon = type === "success"
+    ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 8v5.5M12 16.5h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/></svg>`;
+
+  clearTimeout(toastTimer);
+  toast.classList.remove("hidden", "is-hiding", "is-visible", "is-success");
+  toast.classList.toggle("is-success", type === "success");
+  toast.innerHTML = `
+    <span class="toast-icon">${icon}</span>
+    <span class="toast-copy">
+      <span class="toast-title">${esc(payload.title || "Ops")}</span>
+      <span class="toast-text">${esc(payload.text || "")}</span>
+    </span>
+  `;
+
+  requestAnimationFrame(() => {
+    toast.classList.add("is-visible");
+  });
+
+  toastTimer = setTimeout(() => {
+    toast.classList.add("is-hiding");
+    toast.classList.remove("is-visible");
+    setTimeout(() => {
+      toast.classList.add("hidden");
+      toast.classList.remove("is-hiding", "is-success");
+      toast.innerHTML = "";
+    }, 220);
+  }, 3400);
+}
+
 function showWelcome(name, detail, canOpenVoucher = false) {
   const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
   const shown = parts.length <= 2
@@ -110,12 +214,16 @@ function setView(view) {
 function setBusy(button, busy, text) {
   if (!button) return;
 
-  if (!button.dataset.originalText) {
-    button.dataset.originalText = button.textContent;
+  if (!button.dataset.originalHtml) {
+    button.dataset.originalHtml = button.innerHTML;
   }
 
   button.disabled = busy;
-  button.textContent = busy ? text : button.dataset.originalText;
+  if (busy) {
+    button.textContent = text;
+  } else {
+    button.innerHTML = button.dataset.originalHtml;
+  }
 }
 
 // Menu do usuário
@@ -154,7 +262,7 @@ $("login").onclick = async () => {
     await signInWithPopup(auth, new GoogleAuthProvider());
   } catch (error) {
     console.error(error);
-    alert(error.message);
+    showToast(friendlyError(error, "Não foi possível entrar com o Google."), "error");
   }
 };
 
@@ -339,8 +447,7 @@ async function loadReservation() {
 
   // O usuário já votou. Não libera uma nova inscrição.
   $("receiptName").textContent = reservation.name || "";
-  $("receiptItem").textContent =
-    itemById(reservation.itemId)?.name || "Sem contribuição";
+  setReceiptItem(itemById(reservation.itemId)?.name || "Sem contribuição");
 
   return true;
 }
@@ -410,7 +517,12 @@ function openAdminPanel() {
 
 $("showReceipt").onclick = showReceipt;
 $("openVoucher").onclick = showReceipt;
-$("closeSheet").onclick = () => closeSheet();
+$("notice").onclick = () => {
+  if (!$("notice").classList.contains("is-confirmed")) return;
+  if ($("openVoucher").classList.contains("hidden")) return;
+  showReceipt();
+};
+$("closeSheet").onclick = () => backToHome();
 $("backHome").onclick = backToHome;
 $("openAdmin").onclick = openAdminPanel;
 $("backToReceipt").onclick = showReceipt;
@@ -494,7 +606,16 @@ $("reservation").onsubmit = async event => {
 
 
     $("receiptName").textContent = name;
-    $("receiptItem").textContent = itemById(itemId)?.name || "";
+    setReceiptItem(itemById(itemId)?.name || "");
+
+    $("app").classList.add("hidden");
+    showWelcome(name, "Sua presença já está confirmada.", true);
+
+    if (isAdmin(userEmail())) {
+      $("viewTabs").classList.remove("hidden");
+      $("backToReceipt").classList.remove("hidden");
+      setView("home");
+    }
 
     $("successModal").classList.remove("hidden");
 
@@ -505,7 +626,10 @@ $("reservation").onsubmit = async event => {
     }
   } catch (error) {
     console.error(error);
-    alert(error.message || "Não foi possível salvar sua participação.");
+    showToast(
+      friendlyError(error, "Não foi possível salvar sua participação."),
+      "error"
+    );
   } finally {
     setBusy(button, false);
   }
@@ -530,20 +654,20 @@ async function loadAdmin() {
 
   $("stats").innerHTML = `
     <div class="stat">
+      <span class="stat-label">Confirmados</span>
       <b>${confirmed.length}</b>
-      <span>Confirmados</span>
     </div>
 
     <div class="stat">
+      <span class="stat-label">Pessoas</span>
       <b>${totalPeople}</b>
-      <span>Pessoas</span>
     </div>
 
     <div class="stat">
+      <span class="stat-label">Itens livres</span>
       <b>${ITEMS.filter(item =>
     claims.filter(claim => claim.itemId === item.id).length < item.capacity
   ).length}</b>
-      <span>Itens livres</span>
     </div>
   `;
 
@@ -553,29 +677,40 @@ async function loadAdmin() {
     ).length;
     const pct = Math.min(100, Math.round((claimed / item.capacity) * 100));
     const full = claimed >= item.capacity;
+    const icon = [...item.name][0] || "•";
+    const title = item.name.replace(icon, "").trim();
 
     return `
-      <div class="item-row${full ? " is-full" : ""}">
+      <article class="item-row${full ? " is-full" : ""}">
+        <div class="item-icon" aria-hidden="true">${icon}</div>
         <div class="item-copy">
-          <span class="item-title">${esc(item.name)}</span>
-          <span class="muted">${esc(item.category)}</span>
+          <div class="item-head">
+            <span class="item-title">${esc(title)}</span>
+            <strong>${claimed}<span>/${item.capacity}</span></strong>
+          </div>
+          <span class="item-desc">${esc(item.category)}</span>
           <span class="meter" aria-hidden="true"><span style="width:${pct}%"></span></span>
         </div>
-        <strong>${claimed}<span>/${item.capacity}</span></strong>
-      </div>
+      </article>
     `;
   }).join("");
 
-  $("attendees").innerHTML = people.map(person => `
-    <div class="person">
+  $("attendees").innerHTML = people.map(person => {
+    const itemName = itemById(person.itemId)?.name || "Sem item";
+    const itemIcon = [...itemName][0] || "•";
+    const itemTitle = itemName.replace(itemIcon, "").trim() || itemName;
+
+    return `
+    <article class="person">
       <div class="person-copy">
         <span class="person-name">${esc(person.name)}</span>
-        <span class="muted">${esc(person.email)}</span>
-        <span class="muted">${esc(itemById(person.itemId)?.name || "Sem item")}</span>
+        <span class="person-meta">${esc(person.email)}</span>
+        <span class="person-item"><span aria-hidden="true">${esc(itemIcon)}</span>${esc(itemTitle)}</span>
       </div>
       <span class="status ${person.attending ? "is-yes" : "is-no"}">${person.attending ? "Confirmado" : "Não irá"}</span>
-    </div>
-  `).join("") || '<p class="muted">Ainda não há inscrições.</p>';
+    </article>
+  `;
+  }).join("") || '<p class="attendees-empty">Ainda não há inscrições.</p>';
 }
 
 function esc(value) {
@@ -588,11 +723,32 @@ function esc(value) {
   })[char]);
 }
 
+function setReceiptItem(name) {
+  const el = $("receiptItem");
+  const raw = String(name || "Sem contribuição").trim();
+  const chars = [...raw];
+  const icon = chars[0] || "";
+  const title = chars.slice(1).join("").trim();
+  const hasIcon = icon && title && /\p{Extended_Pictographic}/u.test(icon);
+
+  el.dataset.label = raw;
+
+  if (hasIcon) {
+    el.innerHTML = `<span class="item-emoji" aria-hidden="true">${esc(icon)}</span><span>${esc(title)}</span>`;
+    return;
+  }
+
+  el.textContent = raw;
+}
+
 // Atualizar painel
 $("refresh").onclick = () => {
   loadAdmin().catch(error => {
     console.error(error);
-    alert("Não foi possível atualizar o painel.");
+    showToast({
+      title: "Painel offline",
+      text: "Não foi possível atualizar agora. Tente de novo em instantes."
+    }, "error");
   });
 };
 
@@ -604,11 +760,47 @@ function closeHistory() {
   document.body.classList.remove("is-history");
 }
 
+function historySkeleton() {
+  return `
+    <ol class="history-timeline" aria-hidden="true">
+      <li class="history-entry is-skeleton">
+        <span class="history-rail"></span>
+        <div class="history-stub">
+          <span class="skel skel-line skel-sm"></span>
+          <span class="skel skel-line skel-lg"></span>
+          <span class="skel skel-line"></span>
+          <span class="skel skel-line"></span>
+        </div>
+      </li>
+    </ol>
+  `;
+}
+
+function renderHistoryEntry({ date, title, facts }) {
+  return `
+    <li class="history-entry">
+      <span class="history-rail" aria-hidden="true"></span>
+      <article class="history-stub">
+        <p class="history-date">${esc(date)}</p>
+        <h2>${esc(title)}</h2>
+        <ul class="history-facts">
+          ${facts.map(([label, value]) => `
+            <li>
+              <span>${esc(label)}</span>
+              <strong>${esc(value)}</strong>
+            </li>
+          `).join("")}
+        </ul>
+      </article>
+    </li>
+  `;
+}
+
 async function openHistory() {
   if (!currentUser) return;
 
   $("userDropdown").classList.add("hidden");
-  $("historyList").innerHTML = '<p class="history-empty">Carregando...</p>';
+  $("historyList").innerHTML = historySkeleton();
   $("history").classList.remove("hidden");
   document.body.classList.add("is-history");
 
@@ -625,16 +817,18 @@ async function openHistory() {
     : "Não participou";
 
   $("historyList").innerHTML = `
-    <article class="history-card">
-      <p class="history-date">12 de dezembro de 2026</p>
-      <h2>Open House BBQ</h2>
-      <dl>
-        <div><dt>Horário</dt><dd>13:00</dd></div>
-        <div><dt>Local</dt><dd>Salão de festa</dd></div>
-        <div><dt>Endereço</dt><dd>${esc(EVENT_ADDRESS)}</dd></div>
-        <div><dt>Você levou</dt><dd>${esc(brought)}</dd></div>
-      </dl>
-    </article>
+    <ol class="history-timeline">
+      ${renderHistoryEntry({
+        date: "12 de dezembro de 2026",
+        title: "Open House BBQ",
+        facts: [
+          ["Horário", "13:00"],
+          ["Local", "Salão de festa"],
+          ["Endereço", EVENT_ADDRESS],
+          ["Você levou", brought]
+        ]
+      })}
+    </ol>
   `;
 }
 
@@ -654,7 +848,10 @@ async function copyAddress(button) {
     }, 1800);
   } catch (error) {
     button.classList.remove("is-copied");
-    alert("Não foi possível copiar. Selecione o endereço manualmente.");
+    showToast({
+      title: "Não copiado",
+      text: "Não foi possível copiar. Selecione o endereço manualmente."
+    }, "error");
   }
 }
 
@@ -979,7 +1176,10 @@ $("exportAdmin").onclick = async () => {
     downloadCanvas(drawReport(adminReport), "open-house-bbq-confirmados.png");
   } catch (error) {
     console.error(error);
-    alert("Não foi possível gerar a imagem.");
+    showToast({
+      title: "Exportação falhou",
+      text: "Não foi possível gerar a imagem do painel."
+    }, "error");
   } finally {
     setBusy(button, false);
   }
@@ -991,11 +1191,16 @@ $("downloadVoucher").onclick = async () => {
   try {
     await paintWhenReady();
     const name = $("receiptName").textContent.trim() || "Convidado";
-    const item = $("receiptItem").textContent.trim() || "Sem contribuição";
+    const item = $("receiptItem").dataset.label?.trim()
+      || $("receiptItem").textContent.trim()
+      || "Sem contribuição";
     downloadCanvas(drawVoucher(name, item), `voucher-${fileSlug(name)}.png`);
   } catch (error) {
     console.error(error);
-    alert("Não foi possível baixar o voucher.");
+    showToast({
+      title: "Download falhou",
+      text: "Não foi possível baixar o voucher agora."
+    }, "error");
   } finally {
     setBusy(button, false);
   }
