@@ -1,143 +1,501 @@
-rules_version = '2';
 
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Usuário autenticado pelo Firebase.
-    function signedIn() {
-      return request.auth != null;
-    }
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 
-    // Administrador.
-    function isAdmin() {
-      return signedIn()
-        && request.auth.token.email == "pedro.ruffo.dev@gmail.com";
-    }
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 
-    // Itens permitidos.
-    function validItem(id) {
-      return id in [
-        "carne-bovina",
-        "linguica",
-        "frango",
-        "pao-alho",
-        "queijo"
-      ];
-    }
+import {
+  getFirestore,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  runTransaction,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
-    // Caminhos dos documentos.
-    function reservationPath(uid) {
-      return /databases/$(database)/documents/reservations/$(uid);
-    }
+// Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyCSj__eG6LftnnxxJD7SvJ2Up_-Si_tP9o",
+  authDomain: "open-house-bbq.firebaseapp.com",
+  projectId: "open-house-bbq",
+  storageBucket: "open-house-bbq.firebasestorage.app",
+  messagingSenderId: "78187718949",
+  appId: "1:78187718949:web:23992e6e9c47b57f8212cc",
+  measurementId: "G-H79Y057H79"
+};
 
-    function claimPath(uid) {
-      return /databases/$(database)/documents/claims/$(uid);
-    }
+const ADMIN_EMAILS = ["pedro.ruffo.dev@gmail.com"];
 
-    // Confere se a inscrição e a contribuição
-    // estão sendo criadas juntas.
-    function reservationMatchesClaim(uid, itemId) {
-      return existsAfter(reservationPath(uid))
-        && getAfter(reservationPath(uid)).data.uid == uid
-        && getAfter(reservationPath(uid)).data.attending == true
-        && getAfter(reservationPath(uid)).data.itemId == itemId;
-    }
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-    // LISTA DE AUTORIZAÇÃO ANTIGA
-    // Não é mais utilizada.
-    match /allowlist/{email} {
-      allow read, write: if false;
-    }
+const $ = id => document.getElementById(id);
 
-    // INSCRIÇÕES
-    match /reservations/{uid} {
+let currentUser = null;
+let stopClaims = null;
+let currentClaims = [];
 
-      // Cada usuário vê sua própria inscrição.
-      // Administrador pode consultar todas.
-      allow get: if signedIn()
-        && (
-          isAdmin()
-          || request.auth.uid == uid
-        );
+const ITEMS = [
+  ["carne-bovina", "🥩 Carne bovina", 12],
+  ["linguica", "🌭 Linguiça", 7],
+  ["frango", "🍗 Frango", 6],
+  ["pao-alho", "🥖 Pão de alho", 6],
+  ["queijo", "🧀 Queijo coalho", 4]
+].map(([id, name, capacity]) => ({
+  id,
+  name,
+  category: "Churrasco",
+  capacity,
+  active: true
+}));
 
-      allow list: if isAdmin();
+const isAdmin = email =>
+  ADMIN_EMAILS.includes(String(email || "").trim().toLowerCase());
 
-      // Somente criação.
-      // Se já existe uma inscrição, não pode criar outra.
-      allow create: if signedIn()
-        && request.auth.uid == uid
-        && !exists(reservationPath(uid))
-        && request.resource.data.keys().hasOnly([
-          "uid",
-          "email",
-          "name",
-          "attending",
-          "itemId",
-          "createdAt"
-        ])
-        && request.resource.data.uid == uid
-        && request.resource.data.email == request.auth.token.email
-        && request.resource.data.name is string
-        && request.resource.data.name.size() > 0
-        && request.resource.data.name.size() <= 90
-        && request.resource.data.attending is bool
-        && (
-          (
-            request.resource.data.attending == true
-            && validItem(request.resource.data.itemId)
-            && existsAfter(claimPath(uid))
-            && getAfter(claimPath(uid)).data.uid == uid
-            && getAfter(claimPath(uid)).data.itemId
-              == request.resource.data.itemId
-          )
-          ||
-          (
-            request.resource.data.attending == false
-            && request.resource.data.itemId == null
-            && !existsAfter(claimPath(uid))
-          )
-        );
+const userEmail = () =>
+  String(currentUser?.email || "").trim().toLowerCase();
 
-      // Não pode editar nem excluir.
-      allow update, delete: if false;
-    }
-
-    // CONTRIBUIÇÕES
-    match /claims/{uid} {
-
-      // Usuários autenticados podem consultar
-      // as contribuições para visualizar as vagas.
-      allow read: if signedIn();
-
-      // Somente o próprio usuário pode criar
-      // sua contribuição, junto com a inscrição.
-      allow create: if signedIn()
-        && request.auth.uid == uid
-        && !exists(claimPath(uid))
-        && !exists(reservationPath(uid))
-        && request.resource.data.keys().hasOnly([
-          "uid",
-          "itemId",
-          "createdAt"
-        ])
-        && request.resource.data.uid == uid
-        && validItem(request.resource.data.itemId)
-        && reservationMatchesClaim(
-          uid,
-          request.resource.data.itemId
-        );
-
-      // Não pode alterar nem excluir.
-      allow update, delete: if false;
-    }
-
-    // ITENS
-    match /items/{itemId} {
-      allow read, write: if false;
-    }
-
-    // DADOS ADMINISTRATIVOS
-    match /adminData/{docId} {
-      allow read, write: if false;
-    }
-  }
+function itemById(id) {
+  return ITEMS.find(item => item.id === id);
 }
+
+function showMessage(message) {
+  $("notice").textContent = message;
+}
+
+function setBusy(button, busy, text) {
+  if (!button) return;
+
+  if (!button.dataset.originalText) {
+    button.dataset.originalText = button.textContent;
+  }
+
+  button.disabled = busy;
+  button.textContent = busy ? text : button.dataset.originalText;
+}
+
+// Menu do usuário
+$("userMenuButton").onclick = () => {
+  $("userDropdown").classList.toggle("hidden");
+};
+
+document.addEventListener("click", event => {
+  if (!event.target.closest(".user-menu")) {
+    $("userDropdown").classList.add("hidden");
+  }
+});
+
+$("logout").onclick = async () => {
+  await signOut(auth);
+  $("userDropdown").classList.add("hidden");
+};
+
+// Login Google
+$("login").onclick = async () => {
+  if (auth.currentUser) {
+    await signOut(auth);
+    return;
+  }
+
+  try {
+    await signInWithPopup(auth, new GoogleAuthProvider());
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
+  }
+};
+
+// Autenticação
+onAuthStateChanged(auth, async user => {
+  currentUser = user;
+
+  $("login").classList.toggle("hidden", !!user);
+  $("userMenu").classList.toggle("hidden", !user);
+
+  if (user) {
+    const name = user.displayName || "Minha conta";
+    const email = user.email || "";
+
+    $("userName").textContent = name.split(" ")[0];
+    $("dropdownName").textContent = name;
+    $("dropdownEmail").textContent = email;
+
+    $("userAvatar").src =
+      user.photoURL || "https://www.gravatar.com/avatar/?d=mp";
+
+    $("userAvatar").alt = `Foto de ${name}`;
+  }
+
+  $("identity").textContent = user
+    ? `Conectado como ${user.email}`
+    : "";
+
+  $("app").classList.add("hidden");
+  $("admin").classList.add("hidden");
+
+  if (stopClaims) {
+    stopClaims();
+    stopClaims = null;
+  }
+
+  currentClaims = [];
+
+  if (!user) {
+    showMessage("Entre com sua conta Google para participar.");
+    return;
+  }
+
+  try {
+    const admin = isAdmin(userEmail());
+
+    showMessage("Acesso autorizado! Escolha sua contribuição.");
+    $("app").classList.remove("hidden");
+
+    if (admin) {
+      $("admin").classList.remove("hidden");
+    }
+
+    const alreadyVoted = await loadReservation();
+
+    if (alreadyVoted) {
+      showReceipt();
+      return;
+    }
+
+    $("app").classList.remove("hidden");
+
+    stopClaims = onSnapshot(
+      collection(db, "claims"),
+      snapshot => {
+        currentClaims = snapshot.docs.map(d => ({
+          uid: d.id,
+          ...d.data()
+        }));
+
+        renderItems();
+
+        if (isAdmin(userEmail())) {
+          loadAdmin().catch(console.error);
+        }
+      },
+      error => {
+        console.error(error);
+        showMessage(
+          "Não foi possível carregar as opções. Verifique as regras do Firestore."
+        );
+      }
+    );
+
+    if (admin) {
+      await loadAdmin();
+    }
+  } catch (error) {
+    console.error(error);
+    showMessage(
+      "Não foi possível carregar sua inscrição. Confira as regras do Firestore."
+    );
+  }
+});
+
+// Renderização dos itens
+function renderItems() {
+  const select = $("item");
+  const previous = select.value;
+
+  const myClaim = currentClaims.find(
+    claim => claim.uid === currentUser?.uid
+  );
+
+  const myItemId = myClaim?.itemId || "";
+
+  select.innerHTML = '<option value="">Selecione um item</option>';
+
+  const groups = {};
+
+  ITEMS.forEach(item => {
+    const claimed = currentClaims.filter(
+      claim => claim.itemId === item.id
+    ).length;
+
+    const remaining = item.capacity - claimed;
+
+    if (remaining <= 0 && myItemId !== item.id) return;
+
+    (groups[item.category] ||= []).push({
+      ...item,
+      remaining: Math.max(0, remaining)
+    });
+  });
+
+  Object.entries(groups).forEach(([category, rows]) => {
+    const group = document.createElement("optgroup");
+    group.label = category;
+
+    rows.forEach(item => {
+      const option = document.createElement("option");
+
+      option.value = item.id;
+      option.textContent = item.remaining > 0
+        ? `${item.name} — ${item.remaining} vaga(s)`
+        : `${item.name} — sua escolha`;
+
+      group.append(option);
+    });
+
+    select.append(group);
+  });
+
+  if ([...select.options].some(option => option.value === previous)) {
+    select.value = previous;
+  } else if (myItemId) {
+    select.value = myItemId;
+  }
+
+  select.disabled = !$("attending").checked;
+}
+
+// Carrega inscrição
+
+async function loadReservation() {
+  const ref = doc(db, "reservations", currentUser.uid);
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) {
+    $("reservation").reset();
+    $("attending").checked = true;
+    $("item").disabled = false;
+    return false;
+  }
+
+  const reservation = snap.data();
+
+  $("name").value = reservation.name || "";
+
+  // O usuário já votou. Não libera uma nova inscrição.
+  $("receiptName").textContent = reservation.name || "";
+  $("receiptItem").textContent =
+    itemById(reservation.itemId)?.name || "Sem contribuição";
+
+  return true;
+}
+
+function showReceipt() {
+  document.body.classList.add("voted");
+  $("receipt").classList.remove("hidden");
+  $("successModal").classList.add("hidden");
+}
+
+$("showReceipt").onclick = showReceipt;
+
+
+$("attending").onchange = () => {
+  $("item").disabled = !$("attending").checked;
+};
+
+// Salva inscrição
+$("reservation").onsubmit = async event => {
+  event.preventDefault();
+
+  if (!currentUser) return;
+
+  const button = $("reservation").querySelector(
+    'button[type="submit"]'
+  );
+
+  setBusy(button, true, "Salvando...");
+
+  try {
+    const name = $("name").value.trim().slice(0, 90);
+    const attending = $("attending").checked;
+    const itemId = attending ? $("item").value : "";
+
+    if (!name) {
+      throw new Error("Informe seu nome.");
+    }
+
+    if (attending && !itemById(itemId)) {
+      throw new Error("Escolha um item válido para levar.");
+    }
+
+    const reservationRef = doc(db, "reservations", currentUser.uid);
+    const claimRef = doc(db, "claims", currentUser.uid);
+
+    const claimsSnapshot = await getDocs(collection(db, "claims"));
+
+    await runTransaction(db, async transaction => {
+      const claimSnap = await transaction.get(claimRef);
+
+      if (attending) {
+        const claimedByOthers = claimsSnapshot.docs.filter(d =>
+          d.id !== currentUser.uid &&
+          d.data().itemId === itemId
+        ).length;
+
+        const selectedItem = itemById(itemId);
+
+        if (claimedByOthers >= selectedItem.capacity) {
+          throw new Error("Esse item atingiu o limite. Escolha outro.");
+        }
+
+        transaction.set(claimRef, {
+          uid: currentUser.uid,
+          itemId
+        });
+      } else {
+        transaction.delete(claimRef);
+      }
+
+      transaction.set(reservationRef, {
+        uid: currentUser.uid,
+        email: userEmail(),
+        name,
+        attending,
+        itemId: attending ? itemId : null,
+        updatedAt: serverTimestamp()
+      });
+    });
+
+    $("receiptName").textContent = name;
+    $("receiptItem").textContent = itemById(itemId)?.name || "";
+
+    $("successModal").classList.remove("hidden");
+
+    await loadReservation();
+
+    if (isAdmin(userEmail())) {
+      await loadAdmin();
+    }
+  } catch (error) {
+    console.error(error);
+    alert(error.message || "Não foi possível salvar sua participação.");
+  } finally {
+    setBusy(button, false);
+  }
+};
+
+// Cancela inscrição
+$("cancel").onclick = async () => {
+  if (!currentUser) return;
+
+  if (!confirm("Deseja cancelar sua inscrição?")) return;
+
+  try {
+    const reservationRef = doc(db, "reservations", currentUser.uid);
+    const claimRef = doc(db, "claims", currentUser.uid);
+
+    await runTransaction(db, async transaction => {
+      transaction.delete(reservationRef);
+      transaction.delete(claimRef);
+    });
+
+    $("reservation").reset();
+    $("attending").checked = true;
+    $("guests").value = 0;
+    $("item").disabled = false;
+
+    alert("Inscrição cancelada.");
+  } catch (error) {
+    console.error(error);
+    alert(error.message || "Não foi possível cancelar a inscrição.");
+  }
+};
+
+// Painel administrativo
+async function loadAdmin() {
+  if (!isAdmin(userEmail())) return;
+
+  const [reservationsSnap, claimsSnap] = await Promise.all([
+    getDocs(collection(db, "reservations")),
+    getDocs(collection(db, "claims"))
+  ]);
+
+  const people = reservationsSnap.docs.map(d => d.data());
+  const claims = claimsSnap.docs.map(d => d.data());
+
+  const confirmed = people.filter(person => person.attending);
+
+  const totalPeople = confirmed.reduce(
+    (sum, person) => sum + 1 + Number(person.guests || 0),
+    0
+  );
+
+  $("stats").innerHTML = `
+    <div class="stat">
+      <b>${confirmed.length}</b>
+      <span>Inscrições confirmadas</span>
+    </div>
+
+    <div class="stat">
+      <b>${totalPeople}</b>
+      <span>Pessoas no total</span>
+    </div>
+
+    <div class="stat">
+      <b>${ITEMS.filter(item =>
+    claims.filter(claim => claim.itemId === item.id).length < item.capacity
+  ).length}</b>
+      <span>Itens com vagas</span>
+    </div>
+  `;
+
+  $("inventory").innerHTML = ITEMS.map(item => {
+    const claimed = claims.filter(
+      claim => claim.itemId === item.id
+    ).length;
+
+    return `
+      <div class="item-row">
+        <span>
+          ${esc(item.name)}
+          <span class="muted">(${esc(item.category)})</span>
+        </span>
+
+        <strong>${claimed}/${item.capacity}</strong>
+      </div>
+    `;
+  }).join("");
+
+  $("attendees").innerHTML = people.map(person => `
+    <div class="person">
+      <span>
+        ${esc(person.name)}
+        <br>
+        <small class="muted">
+          ${esc(person.email)} ·
+          ${Number(person.guests || 0)} acompanhante(s) ·
+          ${esc(itemById(person.itemId)?.name || "Sem item")}
+        </small>
+      </span>
+
+      <strong>
+        ${person.attending ? "Confirmado" : "Não irá"}
+      </strong>
+    </div>
+  `).join("") || '<p class="muted">Ainda não há inscrições.</p>';
+}
+
+function esc(value) {
+  return String(value || "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+// Atualizar painel
+$("refresh").onclick = () => {
+  loadAdmin().catch(error => {
+    console.error(error);
+    alert("Não foi possível atualizar o painel.");
+  });
+};
