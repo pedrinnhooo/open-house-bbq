@@ -490,14 +490,17 @@ $("wazeLink").href =
   `https://waze.com/ul?q=${encodedAddress}&navigate=yes`;
 
 $("copyAddress").addEventListener("click", async () => {
+  const button = $("copyAddress");
+
   try {
     await navigator.clipboard.writeText(EVENT_ADDRESS);
-    $("copyFeedback").textContent = "Endereço copiado! 📋";
+    button.classList.add("is-copied");
+    clearTimeout(button._copiedTimer);
+    button._copiedTimer = setTimeout(() => {
+      button.classList.remove("is-copied");
+    }, 1800);
   } catch (error) {
-    $("copyFeedback").textContent =
-      "Não foi possível copiar. Selecione o endereço manualmente.";
+    button.classList.remove("is-copied");
+    alert("Não foi possível copiar. Selecione o endereço manualmente.");
   }
 });
-
-copyAddress.classList.add("is-copied");
-setTimeout(() => copyAddress.classList.remove("is-copied"), 1800);
