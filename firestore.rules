@@ -23,6 +23,16 @@ service cloud.firestore {
       ];
     }
 
+    // Nome travado na conta Google + charset seguro (anti lixo / injection)
+    function validName(name) {
+      return name is string
+        && name.size() >= 3
+        && name.size() <= 90
+        && request.auth.token.name is string
+        && name == request.auth.token.name
+        && name.matches("^[A-Za-zÀ-ÖØ-öø-ÿ]+([ '\\-][A-Za-zÀ-ÖØ-öø-ÿ]+)+$");
+    }
+
     function reservationPath(uid) {
       return /databases/$(database)/documents/reservations/$(uid);
     }
@@ -61,26 +71,13 @@ service cloud.firestore {
         ])
         && request.resource.data.uid == uid
         && request.resource.data.email == request.auth.token.email
-        && request.resource.data.name is string
-        && request.resource.data.name.size() > 0
-        && request.resource.data.name.size() <= 90
-        && request.resource.data.attending is bool
-        && (
-          (
-            request.resource.data.attending == true
-            && validItem(request.resource.data.itemId)
-            && existsAfter(claimPath(uid))
-            && getAfter(claimPath(uid)).data.uid == uid
-            && getAfter(claimPath(uid)).data.itemId
-              == request.resource.data.itemId
-          )
-          ||
-          (
-            request.resource.data.attending == false
-            && request.resource.data.itemId == null
-            && !existsAfter(claimPath(uid))
-          )
-        );
+        && validName(request.resource.data.name)
+        && request.resource.data.attending == true
+        && validItem(request.resource.data.itemId)
+        && existsAfter(claimPath(uid))
+        && getAfter(claimPath(uid)).data.uid == uid
+        && getAfter(claimPath(uid)).data.itemId
+          == request.resource.data.itemId;
 
       allow update, delete: if false;
     }

@@ -67,6 +67,57 @@ function itemById(id) {
   return ITEMS.find(item => item.id === id);
 }
 
+function googleDisplayName() {
+  return String(currentUser?.displayName || "")
+    .normalize("NFKC")
+    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 90);
+}
+
+function isSafePersonName(name) {
+  return /^[A-Za-zÀ-ÖØ-öø-ÿ]+(?:[ '\-][A-Za-zÀ-ÖØ-öø-ÿ]+)+$/.test(name)
+    && name.length >= 3
+    && name.length <= 90
+    && !/(prompt|ignore previous|system:|<\s*script|[{}`]|--|\/\*|\*\/|;)/i.test(name);
+}
+
+function fillLockedName() {
+  const nameInput = $("name");
+  const nameDisplay = $("nameDisplay");
+  if (!nameInput || !nameDisplay) return;
+
+  const name = googleDisplayName();
+  nameInput.value = name;
+  nameDisplay.textContent = name || "Nome indisponível na conta Google";
+  nameDisplay.classList.toggle("is-empty", !name);
+}
+
+function validateReservationInput({ name, attending, itemId }) {
+  const lockedName = googleDisplayName();
+
+  if (!lockedName) {
+    throw new Error("Sua conta Google precisa de um nome válido (nome e sobrenome).");
+  }
+
+  if (!isSafePersonName(lockedName)) {
+    throw new Error("Sua conta Google precisa de um nome válido (nome e sobrenome).");
+  }
+
+  if (name !== lockedName) {
+    throw new Error("O nome precisa ser o da sua conta Google.");
+  }
+
+  if (!attending) {
+    throw new Error("Marque que você vai participar do Open House.");
+  }
+
+  if (!itemId || !itemById(itemId)) {
+    throw new Error("Escolha um item válido para levar.");
+  }
+}
+
 function revealPage() {
   window.scrollTo(0, 0);
   document.documentElement.classList.remove("auth-pending");
@@ -105,13 +156,23 @@ function friendlyError(error, fallback = "Algo deu errado. Tente de novo.") {
     };
   }
 
-  if (message.includes("Informe seu nome")) {
-    return { title: "Nome necessário", text: "Digite como podemos te chamar." };
+  if (message.includes("nome válido") || message.includes("conta Google")) {
+    return {
+      title: "Nome inválido",
+      text: "Use uma conta Google com nome e sobrenome válidos."
+    };
   }
 
-  if (message.includes("Escolha um item")) {
+  if (message.includes("Marque que você vai participar")) {
     return {
-      title: "Falta escolher o item",
+      title: "Confirme a presença",
+      text: "Marque que você vai participar para continuar."
+    };
+  }
+
+  if (message.includes("Escolha um item") || message.includes("item válido")) {
+    return {
+      title: "Falta a contribuição",
       text: "Selecione o que você gostaria de levar."
     };
   }
@@ -259,7 +320,10 @@ $("login").onclick = async () => {
   }
 
   try {
-    await signInWithPopup(auth, new GoogleAuthProvider());
+    const provider = new GoogleAuthProvider();
+    provider.addScope("profile");
+    provider.setCustomParameters({ prompt: "select_account" });
+    await signInWithPopup(auth, provider);
   } catch (error) {
     console.error(error);
     showToast(friendlyError(error, "Não foi possível entrar com o Google."), "error");
@@ -317,12 +381,15 @@ onAuthStateChanged(auth, async user => {
     const alreadyVoted = await loadReservation();
     const welcome = currentUser.displayName || currentUser.email || "";
 
+    fillLockedName();
+
     if (alreadyVoted) {
       $("app").classList.add("hidden");
       showWelcome(welcome, "Sua presença já está confirmada.", true);
     } else {
       $("app").classList.remove("hidden");
       showWelcome(welcome, "");
+      fillLockedName();
     }
 
     if (admin) {
@@ -438,15 +505,15 @@ async function loadReservation() {
     $("reservation").reset();
     $("attending").checked = true;
     $("item").disabled = false;
+    fillLockedName();
     return false;
   }
 
   const reservation = snap.data();
-
-  $("name").value = reservation.name || "";
+  fillLockedName();
 
   // O usuário já votou. Não libera uma nova inscrição.
-  $("receiptName").textContent = reservation.name || "";
+  $("receiptName").textContent = reservation.name || googleDisplayName();
   setReceiptItem(itemById(reservation.itemId)?.name || "Sem contribuição");
 
   return true;
@@ -534,6 +601,7 @@ $("tabAdmin").onclick = () => {
 
 $("attending").onchange = () => {
   $("item").disabled = !$("attending").checked;
+  if (!$("attending").checked) $("item").value = "";
 };
 
 // Salva inscrição
@@ -546,20 +614,15 @@ $("reservation").onsubmit = async event => {
     'button[type="submit"]'
   );
 
-  setBusy(button, true, "Salvando...");
+  setBusy(button, true, "Enviando...");
 
   try {
-    const name = $("name").value.trim().slice(0, 90);
+    fillLockedName();
+    const name = googleDisplayName();
     const attending = $("attending").checked;
-    const itemId = attending ? $("item").value : "";
+    const itemId = String($("item").value || "").trim();
 
-    if (!name) {
-      throw new Error("Informe seu nome.");
-    }
-
-    if (attending && !itemById(itemId)) {
-      throw new Error("Escolha um item válido para levar.");
-    }
+    validateReservationInput({ name, attending, itemId });
 
     const reservationRef = doc(db, "reservations", currentUser.uid);
     const claimRef = doc(db, "claims", currentUser.uid);
@@ -576,30 +639,28 @@ $("reservation").onsubmit = async event => {
         throw new Error("Sua inscrição já foi realizada. Não é possível votar novamente.");
       }
 
-      if (attending) {
-        const claimedByOthers = claimsSnapshot.docs.filter(d =>
-          d.id !== currentUser.uid &&
-          d.data().itemId === itemId
-        ).length;
+      const claimedByOthers = claimsSnapshot.docs.filter(d =>
+        d.id !== currentUser.uid &&
+        d.data().itemId === itemId
+      ).length;
 
-        const selectedItem = itemById(itemId);
+      const selectedItem = itemById(itemId);
 
-        if (claimedByOthers >= selectedItem.capacity) {
-          throw new Error("Esse item atingiu o limite. Escolha outro.");
-        }
-
-        transaction.set(claimRef, {
-          uid: currentUser.uid,
-          itemId
-        });
+      if (claimedByOthers >= selectedItem.capacity) {
+        throw new Error("Esse item atingiu o limite. Escolha outro.");
       }
+
+      transaction.set(claimRef, {
+        uid: currentUser.uid,
+        itemId
+      });
 
       transaction.set(reservationRef, {
         uid: currentUser.uid,
         email: userEmail(),
         name,
-        attending,
-        itemId: attending ? itemId : null,
+        attending: true,
+        itemId,
         createdAt: serverTimestamp()
       });
     });

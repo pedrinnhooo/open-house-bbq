@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=94">
+  <link rel="stylesheet" href="style.css?v=99">
   <link rel="icon" href="favicon.ico?v=3" sizes="any">
   <link rel="icon" type="image/png" href="favicon.png?v=3" sizes="32x32">
   <script>
@@ -147,26 +147,33 @@
         <p class="form-kicker">Sua participação</p>
         <form id="reservation">
           <label>Seu nome
-            <input id="name" maxlength="90" required autocomplete="name" autocapitalize="words"
-              placeholder="Como podemos te chamar?">
+            <div id="nameDisplay" class="name-locked-display" aria-live="polite">Carregando nome...</div>
+            <input type="hidden" id="name" value="" autocomplete="off">
+            <span class="field-note">Nome da sua conta Google (não editável)</span>
           </label>
 
           <label class="check">
-            <input id="attending" type="checkbox" checked>
+            <input id="attending" type="checkbox" checked required>
             <span>Vou participar do Open House</span>
           </label>
 
           <label>O que você gostaria de levar?
             <span class="select-field">
-              <select id="item">
-                <option value="">Carregando opções...</option>
+              <select id="item" required>
+                <option value="">Selecione um item</option>
               </select>
             </span>
           </label>
 
           <p class="hint">Quando um item atingir o limite, ele deixa de aparecer como opção.</p>
 
-          <button class="primary" type="submit">Salvar minha participação</button>
+          <button class="primary" type="submit">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M22 2 11 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M22 2 15 22l-4-9-9-4 20-7Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Enviar
+          </button>
         </form>
       </section>
 
@@ -407,7 +414,7 @@
 
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-  <script type="module" src="app.js?v=24"></script>
+  <script type="module" src="app.js?v=28"></script>
 </body>
 
 </html>
