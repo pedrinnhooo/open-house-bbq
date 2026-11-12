@@ -844,84 +844,116 @@ select {
   }
 }
 
-/* ===== Address + Navigation buttons ===== */
-#copyAddress {
-  width: 100%;
-  margin-top: 20px;
+/* ===== Botões de ação (novo layout) ===== */
+
+.action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  min-height: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
   font-weight: 600;
   font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.28);
+  transform: translateY(-1px);
+}
+
+.action-btn:active {
+  transform: scale(0.97);
+}
+
+/* Botão Copiar endereço - full width */
+.copy-btn {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 20px;
+  padding: 0 18px;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.copy-btn svg {
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.copy-btn:hover svg {
+  opacity: 1;
+}
+
+/* Container dos botões Uber + Waze */
+.nav-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+/* Botões quadrados com logo */
+.nav-btn {
+  aspect-ratio: 1 / 1;          /* deixa quadrado */
+  max-height: 72px;
+  min-height: 64px;
+  padding: 0;
+}
+
+/* Cores específicas */
+.nav-btn.uber {
+  background: #000;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.nav-btn.uber:hover {
+  background: #111;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.nav-btn.waze {
+  background: #33a9e8;
+  border-color: transparent;
+}
+
+.nav-btn.waze:hover {
+  background: #2b96d1;
+  filter: brightness(1.08);
 }
 
 /* Feedback */
 #copyFeedback {
   text-align: center;
-  margin: 12px 0 4px;
+  margin-top: 12px;
   font-size: 13px;
   color: #8fc879;
-  min-height: 20px;
-  transition: opacity .25s ease;
+  min-height: 18px;
 }
 
 #copyFeedback:empty {
   display: none;
 }
 
-/* Navigation buttons container */
-.navigation-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 12px;
+/* Acessibilidade */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
-
-.navigation-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 50px;
-  border-radius: 16px;
-  text-decoration: none;
-  font-weight: 700;
-  font-size: 14px;
-  color: white;
-  transition: transform .2s ease, filter .2s ease, box-shadow .2s ease;
-  border: 1px solid transparent;
-}
-
-.navigation-button:active {
-  transform: scale(.97);
-}
-
-/* Uber */
-.navigation-button.uber {
-  background: #111;
-  border-color: rgba(255,255,255,.12);
-  box-shadow: 0 4px 16px rgba(0,0,0,.25);
-}
-
-.navigation-button.uber:hover {
-  filter: brightness(1.15);
-  box-shadow: 0 6px 22px rgba(0,0,0,.35);
-}
-
-/* Waze */
-.navigation-button.waze {
-  background: linear-gradient(135deg, #2ea8e6, #1b8fd0);
-  box-shadow: 0 4px 18px rgba(46, 168, 230, .28);
-}
-
-.navigation-button.waze:hover {
-  filter: brightness(1.08);
-  box-shadow: 0 6px 24px rgba(46, 168, 230, .38);
-}
-
 /* Mobile: stack everything */
 @media (max-width: 420px) {
   .navigation-buttons {
