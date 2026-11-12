@@ -26,7 +26,12 @@ const { CONFIG: RAW_CONFIG } = await import(
 );
 
 function buildConfig(raw) {
+  const host = { ...(raw.host || {}) };
+  const hostName = String(host.name || "").trim();
+  const defaults = raw.brand || {};
   const event = { ...(raw.event || {}) };
+  const copy = { ...(raw.copy || {}) };
+
   event.addressFull = [
     event.addressLine1,
     event.addressLine2
@@ -35,14 +40,41 @@ function buildConfig(raw) {
     .filter(Boolean)
     .join("<br>");
 
+  // Com host.name → marca vira "Churrasco do {nome}"; sem → default do config
+  const brand = hostName
+    ? {
+        name: "Churrasco do",
+        accent: hostName,
+        fullName: `Churrasco do ${hostName}`,
+        documentTitle: `Churrasco do ${hostName}`
+      }
+    : {
+        name: defaults.name || "Open House",
+        accent: defaults.accent || "BBQ",
+        fullName: defaults.fullName || "Open House BBQ",
+        documentTitle: defaults.documentTitle || defaults.fullName || "Open House BBQ"
+      };
+
+  if (hostName) {
+    if (!event.nickname || event.nickname === defaults.fullName) {
+      event.nickname = brand.fullName;
+    }
+    if (!copy.participateLabel || /Open House/i.test(copy.participateLabel)) {
+      copy.participateLabel = `Vou participar do ${brand.fullName}`;
+    }
+    if (!copy.receiptEyebrow || /Open House/i.test(copy.receiptEyebrow)) {
+      copy.receiptEyebrow = brand.fullName;
+    }
+  }
+
   return {
     ...raw,
-    brand: raw.brand || {},
-    host: raw.host || {},
+    brand,
+    host,
     admins: raw.admins || [],
     event,
     items: raw.items || [],
-    copy: raw.copy || {}
+    copy
   };
 }
 

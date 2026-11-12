@@ -15,9 +15,11 @@ export const CONFIG = {
     documentTitle: "Open House BBQ"
   },
 
-  // Dono / anfitrião
+  // Dono / anfitrião — se tiver name, a marca vira "Churrasco do {name}".
+  // Deixe vazio ("") para manter o brand padrão (Open House BBQ).
   host: {
-    name: "Pedro"
+    name: ""
+    // name: "Ciampa"
   },
 
   // Quem pode abrir o painel admin
