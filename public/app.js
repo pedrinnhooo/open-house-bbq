@@ -20,6 +20,34 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
+// Sem cache: cada refresh pega o config.js mais novo
+const { CONFIG: RAW_CONFIG } = await import(
+  `./config.js?t=${Date.now()}`
+);
+
+function buildConfig(raw) {
+  const event = { ...(raw.event || {}) };
+  event.addressFull = [
+    event.addressLine1,
+    event.addressLine2
+  ].filter(Boolean).join(" - ") + (event.addressCity ? `, ${event.addressCity}` : "");
+  event.addressHtml = [event.addressLine1, event.addressLine2]
+    .filter(Boolean)
+    .join("<br>");
+
+  return {
+    ...raw,
+    brand: raw.brand || {},
+    host: raw.host || {},
+    admins: raw.admins || [],
+    event,
+    items: raw.items || [],
+    copy: raw.copy || {}
+  };
+}
+
+const CONFIG = buildConfig(RAW_CONFIG);
+
 // Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyCSj__eG6LftnnxxJD7SvJ2Up_-Si_tP9o",
@@ -31,7 +59,7 @@ const firebaseConfig = {
   measurementId: "G-H79Y057H79"
 };
 
-const ADMIN_EMAILS = ["pedro.ruffo.dev@gmail.com"];
+const ADMIN_EMAILS = CONFIG.admins.map(email => String(email).trim().toLowerCase());
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -43,18 +71,12 @@ let currentUser = null;
 let stopClaims = null;
 let currentClaims = [];
 
-const ITEMS = [
-  ["carne-bovina", "🥩 Carne bovina", 12],
-  ["linguica", "🌭 Linguiça", 7],
-  ["frango", "🍗 Frango", 6],
-  ["pao-alho", "🥖 Pão de alho", 6],
-  ["queijo", "🧀 Queijo coalho", 4]
-].map(([id, name, capacity]) => ({
-  id,
-  name,
-  category: "Churrasco",
-  capacity,
-  active: true
+const ITEMS = CONFIG.items.map(item => ({
+  id: item.id,
+  name: item.name,
+  category: item.category || "Churrasco",
+  capacity: Number(item.capacity) || 0,
+  active: item.active !== false
 }));
 
 const isAdmin = email =>
@@ -65,6 +87,59 @@ const userEmail = () =>
 
 function itemById(id) {
   return ITEMS.find(item => item.id === id);
+}
+
+function applyEventConfig() {
+  const { brand, event, copy } = CONFIG;
+
+  document.title = brand.documentTitle || brand.fullName;
+
+  document.querySelectorAll("[data-config]").forEach(el => {
+    const key = el.getAttribute("data-config");
+    const htmlKey = el.getAttribute("data-config-html");
+
+    if (htmlKey === "event.addressHtml") {
+      el.innerHTML = event.addressHtml;
+      return;
+    }
+
+    const map = {
+      "brand.fullName": brand.fullName,
+      "brand.documentTitle": brand.documentTitle || brand.fullName,
+      "brand.name": brand.name,
+      "brand.accent": brand.accent,
+      "event.kicker": event.kicker,
+      "event.dateShort": event.dateShort,
+      "event.dateFull": event.dateFull,
+      "event.dateCompact": event.dateCompact,
+      "event.time": event.time,
+      "event.place": event.place,
+      "event.addressLine1": event.addressLine1,
+      "event.addressLine2": event.addressLine2,
+      "event.addressFull": event.addressFull,
+      "copy.participateLabel": copy.participateLabel,
+      "copy.receiptEyebrow": copy.receiptEyebrow,
+      "copy.receiptTitle": copy.receiptTitle,
+      "copy.receiptLede": copy.receiptLede,
+      "copy.receiptFooter": copy.receiptFooter
+    };
+
+    if (key && map[key] != null) {
+      el.textContent = map[key];
+    }
+  });
+
+  const brandEl = document.querySelector("[data-config-brand]");
+  if (brandEl) {
+    const safe = value => String(value || "").replace(/[&<>"']/g, char => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    })[char]);
+    brandEl.innerHTML = `${safe(brand.name)} <em>${safe(brand.accent)}</em>`;
+  }
 }
 
 function googleDisplayName() {
@@ -280,6 +355,13 @@ function setBusy(button, busy, text) {
   }
 
   button.disabled = busy;
+  button.setAttribute("aria-busy", busy ? "true" : "false");
+
+  if (button.classList.contains("ticket-tool")) {
+    button.classList.toggle("is-busy", busy);
+    return;
+  }
+
   if (busy) {
     button.textContent = text;
   } else {
@@ -306,7 +388,10 @@ $("logout").onclick = async () => {
 $("openHistory").onclick = () => {
   openHistory().catch(error => {
     console.error(error);
-    $("historyList").innerHTML = '<p class="history-empty">Não foi possível carregar o histórico.</p>';
+    $("history").classList.add("is-empty");
+    $("historyList").innerHTML = historyEmptyState(
+      "Não foi possível carregar o histórico."
+    );
   });
 };
 
@@ -527,9 +612,7 @@ function showReceipt() {
   receipt.classList.remove("hidden", "is-closing");
   document.body.classList.add("voted");
   $("successModal").classList.add("hidden");
-  const admin = isAdmin(userEmail());
-  $("openAdmin").classList.toggle("hidden", !admin);
-  $("backHome").classList.toggle("hidden", admin);
+  $("backHome").classList.remove("hidden");
 }
 
 function closeSheet(after) {
@@ -590,8 +673,10 @@ $("notice").onclick = () => {
   showReceipt();
 };
 $("closeSheet").onclick = () => backToHome();
-$("backHome").onclick = backToHome;
-$("openAdmin").onclick = openAdminPanel;
+$("backHome").onclick = () => {
+  if (isAdmin(userEmail())) openAdminPanel();
+  else backToHome();
+};
 $("backToReceipt").onclick = showReceipt;
 $("tabHome").onclick = () => setView("home");
 $("tabAdmin").onclick = () => {
@@ -747,7 +832,7 @@ async function loadAdmin() {
         <div class="item-copy">
           <div class="item-head">
             <span class="item-title">${esc(title)}</span>
-            <strong>${claimed}<span>/${item.capacity}</span></strong>
+            <strong class="item-count">${claimed}<span>/${item.capacity}</span></strong>
           </div>
           <span class="item-desc">${esc(item.category)}</span>
           <span class="meter" aria-hidden="true"><span style="width:${pct}%"></span></span>
@@ -813,9 +898,9 @@ $("refresh").onclick = () => {
   });
 };
 
-const EVENT_ADDRESS = "R. Francisco Tapajós, 359 - Vila da Saúde, São Paulo - SP";
-const EVENT_NICKNAME = "Open House BBQ";
-const EVENT_COORDS = { lat: -23.6261209, lng: -46.6249828 };
+const EVENT_ADDRESS = CONFIG.event.addressFull;
+const EVENT_NICKNAME = CONFIG.event.nickname || CONFIG.brand.fullName;
+const EVENT_COORDS = CONFIG.event.coords;
 const encodedAddress = encodeURIComponent(EVENT_ADDRESS);
 const encodedNickname = encodeURIComponent(EVENT_NICKNAME);
 
@@ -861,6 +946,7 @@ function openNavApp({ appUrl, webUrl }) {
 
 function closeHistory() {
   $("history").classList.add("hidden");
+  $("history").classList.remove("is-empty");
   document.body.classList.remove("is-history");
 }
 
@@ -900,21 +986,41 @@ function renderHistoryEntry({ date, title, facts }) {
   `;
 }
 
+function historyEmptyState(message) {
+  return `
+    <div class="history-empty" role="status">
+      <div class="history-empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M4 8.5V6.8A1.8 1.8 0 0 1 5.8 5h12.4A1.8 1.8 0 0 1 20 6.8v1.7a2.2 2.2 0 0 0 0 4.4v1.7a1.8 1.8 0 0 1-1.8 1.8H5.8A1.8 1.8 0 0 1 4 14.6v-1.7a2.2 2.2 0 0 0 0-4.4Z" stroke="currentColor" stroke-width="1.7"/>
+          <path d="M9 12h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <p>${esc(message)}</p>
+    </div>
+  `;
+}
+
 async function openHistory() {
   if (!currentUser) return;
 
+  const history = $("history");
   $("userDropdown").classList.add("hidden");
+  history.classList.remove("is-empty");
   $("historyList").innerHTML = historySkeleton();
-  $("history").classList.remove("hidden");
+  history.classList.remove("hidden");
   document.body.classList.add("is-history");
 
   const snap = await getDoc(doc(db, "reservations", currentUser.uid));
 
   if (!snap.exists()) {
-    $("historyList").innerHTML = '<p class="history-empty">Você ainda não confirmou presença em um churrasco.</p>';
+    history.classList.add("is-empty");
+    $("historyList").innerHTML = historyEmptyState(
+      "Você ainda não confirmou presença em um churrasco."
+    );
     return;
   }
 
+  history.classList.remove("is-empty");
   const data = snap.data();
   const brought = data.attending
     ? itemById(data.itemId)?.name || "Sem item"
@@ -923,11 +1029,11 @@ async function openHistory() {
   $("historyList").innerHTML = `
     <ol class="history-timeline">
       ${renderHistoryEntry({
-        date: "12 de dezembro de 2026",
-        title: "Open House BBQ",
+        date: CONFIG.event.dateFull,
+        title: CONFIG.brand.fullName,
         facts: [
-          ["Horário", "13:00"],
-          ["Local", "Salão de festa"],
+          ["Horário", CONFIG.event.time],
+          ["Local", CONFIG.event.place],
           ["Endereço", EVENT_ADDRESS],
           ["Você levou", brought]
         ]
@@ -1060,7 +1166,7 @@ function drawReport(report) {
 
   ctx.fillStyle = "#ff7a3c";
   ctx.font = canvasFont(650, 18);
-  ctx.fillText("OPEN HOUSE BBQ", pad, 52);
+  ctx.fillText(String(CONFIG.brand.fullName || "").toUpperCase(), pad, 52);
 
   ctx.fillStyle = "#f5f5f7";
   ctx.font = canvasFont(600, 52);
@@ -1068,7 +1174,11 @@ function drawReport(report) {
 
   ctx.fillStyle = "#98989f";
   ctx.font = canvasFont(500, 22);
-  ctx.fillText("12 de dezembro de 2026 · 13:00 · Salão de festa", pad, 152);
+  ctx.fillText(
+    `${CONFIG.event.dateFull} · ${CONFIG.event.time} · ${CONFIG.event.place}`,
+    pad,
+    152
+  );
 
   const stats = [
     [String(report.confirmedCount), "Confirmados"],
@@ -1238,17 +1348,17 @@ function drawVoucher(name, item) {
   ctx.textAlign = "center";
   ctx.fillStyle = "#ff7a3c";
   ctx.font = canvasFont(650, 11);
-  ctx.fillText("OPEN HOUSE BBQ", cx, y);
+  ctx.fillText(String(CONFIG.brand.fullName || "").toUpperCase(), cx, y);
   y += 22;
 
   ctx.fillStyle = "#f5f5f7";
   ctx.font = canvasFont(600, 28);
-  ctx.fillText("Presença confirmada!", cx, y);
+  ctx.fillText(CONFIG.copy.receiptTitle, cx, y);
   y += 28;
 
   ctx.fillStyle = "#98989f";
   ctx.font = canvasFont(500, 14);
-  ctx.fillText("Estamos esperando por você.", cx, y);
+  ctx.fillText(CONFIG.copy.receiptLede, cx, y);
   y += 28;
 
   // card interno
@@ -1313,9 +1423,9 @@ function drawVoucher(name, item) {
   drawDivider();
 
   const cols = [
-    ["Data", "12/12/2026"],
-    ["Horário", "13:00"],
-    ["Local", "Salão de festa"]
+    ["Data", CONFIG.event.dateCompact],
+    ["Horário", CONFIG.event.time],
+    ["Local", CONFIG.event.place]
   ];
   const colW = innerW / 3;
   cols.forEach(([label, value], index) => {
@@ -1343,14 +1453,14 @@ function drawVoucher(name, item) {
   ctx.fillText("ENDEREÇO", left + 12, cy + 12);
   ctx.fillStyle = "#f5f5f7";
   ctx.font = canvasFont(600, 12);
-  ctx.fillText("R. Francisco Tapajós, 359", left + 12, cy + 28);
-  ctx.fillText("Vila da Saúde", left + 12, cy + 44);
+  ctx.fillText(CONFIG.event.addressLine1, left + 12, cy + 28);
+  ctx.fillText(CONFIG.event.addressLine2, left + 12, cy + 44);
 
   y = cardTop + cardH + 18;
   ctx.textAlign = "center";
   ctx.fillStyle = "#6e6e73";
   ctx.font = canvasFont(500, 12);
-  ctx.fillText("Guarde esta confirmação. Nos vemos lá.", cx, y);
+  ctx.fillText(CONFIG.copy.receiptFooter, cx, y);
 
   return canvas;
 }
@@ -1403,7 +1513,7 @@ async function captureVoucherCanvas() {
   if (!source) throw new Error("Voucher não encontrado.");
 
   const clone = source.cloneNode(true);
-  clone.querySelectorAll(".receipt-exit, .nav-buttons, .sheet-backdrop").forEach(el => el.remove());
+  clone.querySelectorAll(".receipt-exit, .ticket-toolbar, .nav-buttons, .sheet-backdrop").forEach(el => el.remove());
 
   const copyBtn = clone.querySelector(".copy-btn");
   if (copyBtn) {
@@ -1475,3 +1585,4 @@ $("downloadVoucher").onclick = async () => {
     setBusy(button, false);
   }
 };
+applyEventConfig();
