@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#241a16">
+  <title>Open House BBQ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top"><div class="brand">🔥 OPEN HOUSE <span>BBQ</span></div><button id="login" class="light">Entrar com Google</button></header>
+  <main>
+    <section class="hero"><p class="eyebrow">VOCÊ É NOSSO CONVIDADO</p><h1>Um bom churrasco<br><em>fica melhor junto.</em></h1><p>Confirme sua presença e escolha o que vai levar. As vagas são limitadas para garantir variedade na mesa.</p><div id="identity" class="identity"></div></section>
+    <section id="notice" class="notice">Entre com sua conta Google autorizada para participar.</section>
+    <section id="app" class="panel hidden">
+      <div class="section-head"><div><p class="eyebrow">SUA PARTICIPAÇÃO</p><h2>Vamos organizar?</h2></div><span class="pill">Contribuições</span></div>
+      <form id="reservation">
+        <label>Seu nome<input id="name" maxlength="90" required placeholder="Como podemos te chamar?"></label>
+        <label class="check"><input id="attending" type="checkbox" checked> Vou participar do Open House</label>
+        <label>Quantidade de acompanhantes (além de você)<input id="guests" type="number" min="0" max="10" value="0"></label>
+        <label>O que você gostaria de levar?<select id="item"><option value="">Carregando opções...</option></select></label>
+        <p class="hint">Quando um item atingir o limite, ele deixa de aparecer como opção.</p>
+        <button class="primary" type="submit">Salvar minha participação</button>
+        <button class="text-button" type="button" id="cancel">Cancelar minha inscrição</button>
+      </form>
+    </section>
+    <section id="admin" class="panel hidden">
+      <div class="section-head"><div><p class="eyebrow">VISÃO DO ORGANIZADOR</p><h2>Painel administrativo</h2></div><span class="pill">Admin</span></div>
+      <div id="stats" class="stats"></div>
+      <button id="bootstrap" class="light">Carregar lista inicial de itens</button><h3>Convidados autorizados</h3>
+      <div class="inline"><input id="guestEmail" type="email" placeholder="email@gmail.com"><button id="addGuest" class="primary">Autorizar</button></div>
+      <div id="guestMessage" class="hint"></div>
+      <h3>Disponibilidade dos itens</h3><div id="inventory" class="inventory"></div>
+      <h3>Inscrições</h3><div id="attendees" class="attendees"></div>
+      <button id="refresh" class="light">Atualizar painel</button>
+    </section>
+    <footer>Feito para reunir pessoas, boas conversas e um ótimo churrasco. ❤️</footer>
+  </main>
+  <script type="module" src="app.js"></script>
+</body></html>
