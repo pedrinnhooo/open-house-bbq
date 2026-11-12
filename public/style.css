@@ -478,6 +478,11 @@ main {
 }
 
 @media (min-width: 801px) {
+  .tabs:not(.hidden) {
+    margin-top: 28px;
+    margin-bottom: 14px;
+  }
+
   #homeView {
     grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
     column-gap: 22px;
