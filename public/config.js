@@ -37,10 +37,12 @@ export const CONFIG = {
     addressLine1: "R. Francisco Tapajós, 359",
     addressLine2: "Vila da Saúde",
     addressCity: "São Paulo - SP",
+    // Só nos links do Waze e do Uber. O CEP não aparece no site.
+    navAddress: "Rua Francisco Tapajós, 359, Vila Santo Estéfano, São Paulo - SP, 04153-000",
     nickname: "Open House BBQ",
     coords: {
-      lat: -23.6261209,
-      lng: -46.6249828
+      lat: -23.625966,
+      lng: -46.625428
     }
   },
 

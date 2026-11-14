@@ -931,30 +931,32 @@ $("refresh").onclick = () => {
 };
 
 const EVENT_ADDRESS = CONFIG.event.addressFull;
+const NAV_ADDRESS = CONFIG.event.navAddress || EVENT_ADDRESS;
 const EVENT_NICKNAME = CONFIG.event.nickname || CONFIG.brand.fullName;
 const EVENT_COORDS = CONFIG.event.coords;
-const encodedAddress = encodeURIComponent(EVENT_ADDRESS);
+const encodedNavAddress = encodeURIComponent(NAV_ADDRESS);
 const encodedNickname = encodeURIComponent(EVENT_NICKNAME);
 
 const UBER_WEB_URL =
   `https://m.uber.com/ul/?action=setPickup` +
   `&dropoff[latitude]=${EVENT_COORDS.lat}` +
   `&dropoff[longitude]=${EVENT_COORDS.lng}` +
-  `&dropoff[formatted_address]=${encodedAddress}` +
+  `&dropoff[formatted_address]=${encodedNavAddress}` +
   `&dropoff[nickname]=${encodedNickname}`;
 
 const UBER_APP_URL =
   `uber://riderequest?dropoff[latitude]=${EVENT_COORDS.lat}` +
   `&dropoff[longitude]=${EVENT_COORDS.lng}` +
-  `&dropoff[formatted_address]=${encodedAddress}` +
+  `&dropoff[formatted_address]=${encodedNavAddress}` +
   `&dropoff[nickname]=${encodedNickname}`;
 
 const WAZE_WEB_URL =
   `https://waze.com/ul?ll=${EVENT_COORDS.lat}%2C${EVENT_COORDS.lng}` +
-  `&navigate=yes&zoom=17&q=${encodedAddress}`;
+  `&navigate=yes&zoom=17&q=${encodedNavAddress}`;
 
 const WAZE_APP_URL =
-  `waze://?ll=${EVENT_COORDS.lat},${EVENT_COORDS.lng}&navigate=yes`;
+  `waze://?ll=${EVENT_COORDS.lat},${EVENT_COORDS.lng}` +
+  `&q=${encodedNavAddress}&navigate=yes`;
 
 function openNavApp({ appUrl, webUrl }) {
   const mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
